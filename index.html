@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect - Ultra Compact UI</title>
+    <title>Card Architect - With Icon System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -52,7 +52,6 @@
             border-radius: 4px;
         }
 
-        /* Display field */
         .dynamic-field {
             position: absolute;
             z-index: 20;
@@ -67,11 +66,29 @@
             padding: 2px 4px;
             white-space: pre-wrap;
         }
+
         .dynamic-field.align-left   { justify-content: flex-start; text-align: left; }
         .dynamic-field.align-center { justify-content: center;     text-align: center; }
         .dynamic-field.align-right  { justify-content: flex-end;   text-align: right; }
 
-        /* Inline contenteditable editor */
+        /* Rich text span used inside dynamic-field for inline icons */
+        .field-rich-content {
+            display: inline;
+            line-height: inherit;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .inline-icon {
+            display: inline-block;
+            vertical-align: middle;
+            object-fit: contain;
+            position: relative;
+            top: -0.05em;
+            margin: 0 0.05em;
+            flex-shrink: 0;
+        }
+
         .inline-editor {
             position: absolute;
             z-index: 200;
@@ -86,11 +103,11 @@
             overflow: hidden;
             cursor: text;
         }
+
         .inline-editor.align-left   { text-align: left; }
         .inline-editor.align-center { text-align: center; }
         .inline-editor.align-right  { text-align: right; }
 
-        /* Interaction / drag layer */
         .interaction-layer {
             position: absolute;
             inset: 0;
@@ -105,12 +122,12 @@
             pointer-events: auto;
             transition: border-color 0.2s, background 0.2s;
         }
+
         .interaction-box.active-field {
             border: 2px solid #f97316 !important;
             background: rgba(249,115,22,0.08);
             z-index: 101;
         }
-
 
         .resize-handle {
             position: absolute;
@@ -142,6 +159,7 @@
             position: relative;
             background: rgba(24,24,27,0.4);
         }
+
         .profile-card.active-profile {
             border-color: rgba(249,115,22,0.5);
             background: rgba(249,115,22,0.05);
@@ -154,6 +172,7 @@
             font-size: 10px; font-weight: 700;
             transition: background 0.2s; cursor: pointer;
         }
+
         .toolbar-btn:hover { background: #3f3f46; }
         .toolbar-btn.active { background: #ea580c; border-color: #f97316; color: white; }
 
@@ -164,6 +183,7 @@
             cursor: pointer; transition: background 0.2s;
             width: 24px; height: 24px;
         }
+
         .align-btn:hover { background: #3f3f46; }
         .align-btn.active { background: #ea580c; border-color: #f97316; }
 
@@ -184,7 +204,126 @@
             position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000;
             display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px);
         }
+
         .export-nudge { transform: translateY(-15px); }
+
+        /* ── Icon Library Styles ── */
+        .icon-entry {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(24,24,27,0.6);
+            border: 1px solid #27272a;
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+        }
+
+        .icon-entry:hover { border-color: #3f3f46; }
+
+        .icon-thumb {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            border-radius: 4px;
+            background: #1c1c1f;
+            flex-shrink: 0;
+        }
+
+        .icon-token-input {
+            flex: 1;
+            background: #0c0c0e;
+            border: 1px solid #27272a;
+            border-radius: 6px;
+            color: #f97316;
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            padding: 4px 8px;
+            outline: none;
+            min-width: 0;
+        }
+
+        .icon-token-input:focus { border-color: #f97316; }
+        .icon-token-input::placeholder { color: #3f3f46; }
+
+        .icon-scale-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .icon-scale-wrap label {
+            font-size: 7px;
+            font-weight: 900;
+            color: #52525b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .icon-scale-input {
+            width: 44px;
+            background: #0c0c0e;
+            border: 1px solid #27272a;
+            border-radius: 6px;
+            color: #a1a1aa;
+            font-size: 10px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            padding: 3px 6px;
+            outline: none;
+            text-align: center;
+        }
+
+        .icon-scale-input:focus { border-color: #f97316; }
+
+        .icon-delete-btn {
+            background: none;
+            border: none;
+            color: #52525b;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 2px;
+            flex-shrink: 0;
+            transition: color 0.15s;
+        }
+
+        .icon-delete-btn:hover { color: #ef4444; }
+
+        .icon-drop-zone {
+            border: 2px dashed #27272a;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            background: rgba(24,24,27,0.3);
+        }
+
+        .icon-drop-zone:hover {
+            border-color: #f97316;
+            background: rgba(249,115,22,0.03);
+        }
+
+        /* Corner resize handle for icon scale */
+        .icon-scale-corner {
+            width: 20px;
+            height: 20px;
+            border-right: 3px solid #52525b;
+            border-bottom: 3px solid #52525b;
+            border-radius: 0 0 3px 0;
+            cursor: nwse-resize;
+            flex-shrink: 0;
+            transition: border-color 0.15s;
+            position: relative;
+        }
+
+        .icon-scale-corner:hover { border-color: #f97316; }
+        .icon-scale-corner.dragging { border-color: #f97316; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -198,7 +337,6 @@
 </div>
 
 <main id="workspace" class="flex-1 flex flex-col items-center py-10 bg-[#0c0c0e] overflow-y-auto custom-scrollbar">
-
     <!-- Header -->
     <div class="w-full max-w-4xl px-8 mb-8 flex items-start justify-between">
         <div class="flex flex-col">
@@ -220,7 +358,6 @@
 
     <!-- Floating Toolbar -->
     <div id="formatToolbar" class="mb-8 px-3 py-2 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center gap-3 hidden shadow-2xl backdrop-blur-md flex-wrap">
-
         <div class="flex flex-col pr-3 border-r border-zinc-800 shrink-0 gap-1">
             <div class="flex items-center gap-2">
                 <div class="flex flex-col">
@@ -234,7 +371,6 @@
             </div>
             <div id="modeHint" class="text-[7px] font-black uppercase tracking-widest text-blue-400">&#9654; Move mode — toggle Style for more</div>
         </div>
-
         <div class="flex flex-col shrink-0">
             <span class="text-[7px] font-black text-zinc-500 uppercase leading-none mb-1 tracking-widest">Target</span>
             <select id="savingScopeSelect" class="bg-zinc-950 border border-zinc-800 text-[9px] font-black text-orange-400 rounded-md px-1.5 py-0.5 outline-none focus:border-orange-500 transition-colors">
@@ -243,7 +379,6 @@
                 <option value="card">CARD</option>
             </select>
         </div>
-
         <div id="styleControls" class="flex items-center gap-3 hidden border-l border-zinc-800 pl-3 flex-wrap">
             <div class="flex gap-0.5 shrink-0">
                 <button id="btnBold"   class="toolbar-btn w-6 h-6">B</button>
@@ -256,7 +391,6 @@
             <div class="w-6 h-6 rounded border border-zinc-700 relative shrink-0 overflow-hidden" title="Font color">
                 <input type="color" id="fontColorPicker" value="#000000" class="absolute -inset-2 w-10 h-10 bg-transparent border-none cursor-pointer">
             </div>
-            <!-- Alignment -->
             <div class="flex gap-0.5 shrink-0 border-l border-zinc-800 pl-2">
                 <button id="btnAlignLeft"   class="align-btn" title="Align Left">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2"   width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="5.4" width="7"  height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg>
@@ -277,7 +411,6 @@
         <div id="templateLayer" class="template-layer"></div>
         <div id="fieldsContainer" class="absolute inset-0"></div>
         <div id="interactionLayer" class="interaction-layer"></div>
-        <!-- inline-editor div injected here by JS -->
     </div>
 
     <div class="flex items-center gap-4 mt-10">
@@ -313,6 +446,27 @@
             <div id="templateLibrary" class="grid grid-cols-4 gap-2"></div>
         </section>
 
+        <!-- ── Icon Library Section ── -->
+        <section>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Icon Library</h3>
+                <span class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Use {token} in cells</span>
+            </div>
+
+            <!-- Icon drop zone -->
+            <div id="iconDropZone" class="icon-drop-zone mb-4">
+                <input type="file" id="iconFileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" multiple class="hidden">
+                <svg class="w-5 h-5 mx-auto mb-2 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Upload Icons (PNG / JPG)</p>
+                <p class="text-[8px] text-zinc-600 mt-1">Then set a {token} to map each one</p>
+            </div>
+
+            <!-- Icon entries list -->
+            <div id="iconLibraryList"></div>
+        </section>
+
         <section id="profilesSection">
             <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Profile Logic</h3>
             <select id="triggerCol" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-orange-400 outline-none mb-4 hidden">
@@ -325,6 +479,7 @@
             <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Layer List</h3>
             <div id="columnList" class="space-y-2"></div>
         </section>
+
     </div>
 
     <div class="p-6 bg-zinc-900 border-t border-zinc-800">
@@ -337,616 +492,880 @@
 </aside>
 
 <script>
-    // ── State ──────────────────────────────────────────────────────────────────
-    let data = [];
-    let headers = [];
-    let fieldConfigs = {};
-    let profileSettings = {};
-    let profileStyleOverrides = {};
-    let cardOverrides = {};
-    let cardTextOverrides = {};   // { [cardIndex]: { [header]: string } }
-    let templateAssets = {};
-    let currentIndex = 0;
-    let isEditMode = false;
-    let isStyleMode = false;
-    let selectedHeader = null;
-    let globalTemplateName = null;
-    let activeEditor = null;      // the contenteditable div currently open
-    let dragInfo = { active: false, type: null, header: null, startX: 0, startY: 0, initialConfig: null };
+// ── State ──────────────────────────────────────────────────────────────────
+let data = [];
+let headers = [];
+let fieldConfigs = {};
+let profileSettings = {};
+let profileStyleOverrides = {};
+let cardOverrides = {};
+let cardTextOverrides = {};
+let templateAssets = {};
+let currentIndex = 0;
+let isEditMode = false;
+let isStyleMode = false;
+let selectedHeader = null;
+let globalTemplateName = null;
+let activeEditor = null;
+let dragInfo = { active: false, type: null, header: null, startX: 0, startY: 0, initialConfig: null };
 
-    // ── DOM refs ───────────────────────────────────────────────────────────────
-    const cardPreview      = document.getElementById('cardPreview');
-    const fieldsContainer  = document.getElementById('fieldsContainer');
-    const interactionLayer = document.getElementById('interactionLayer');
-    const columnList       = document.getElementById('columnList');
-    const triggerColSelect = document.getElementById('triggerCol');
-    const profileContainer = document.getElementById('profileContainer');
-    const scopeSelect      = document.getElementById('savingScopeSelect');
-    const currentScopeText = document.getElementById('currentScopeText');
+// ── Icon State ─────────────────────────────────────────────────────────────
+// iconLibrary: array of { id, src (dataURL), token (string without braces), scale (1.0) }
+let iconLibrary = [];
+let iconScaleDrag = null; // { id, startX, startScale }
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
-    function getProfileVal() {
-        const t = triggerColSelect.value;
-        return t ? String(data[currentIndex]?.[t] || '').trim() : null;
-    }
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const cardPreview      = document.getElementById('cardPreview');
+const fieldsContainer  = document.getElementById('fieldsContainer');
+const interactionLayer = document.getElementById('interactionLayer');
+const columnList       = document.getElementById('columnList');
+const triggerColSelect = document.getElementById('triggerCol');
+const profileContainer = document.getElementById('profileContainer');
+const scopeSelect      = document.getElementById('savingScopeSelect');
+const currentScopeText = document.getElementById('currentScopeText');
 
-    function getEffectiveText(h) {
-        if (cardTextOverrides[currentIndex]?.[h] !== undefined) return cardTextOverrides[currentIndex][h];
-        return data[currentIndex]?.[h] ?? '';
-    }
+// ── Icon Helpers ───────────────────────────────────────────────────────────
 
-    function getConfigByScope(h) {
-        const pVal = getProfileVal();
-        if (cardOverrides[currentIndex]?.[h])         return cardOverrides[currentIndex][h];
-        if (pVal && profileStyleOverrides[pVal]?.[h]) return profileStyleOverrides[pVal][h];
-        return fieldConfigs[h];
-    }
+/**
+ * Parse text that may contain {token} placeholders and return an array of
+ * segments: { type: 'text'|'icon', value: string } | { type: 'icon', icon: iconObj }
+ */
+function parseTextWithIcons(text) {
+    if (!text) return [{ type: 'text', value: '' }];
 
-    function getVisibilityByScope(h) {
-        const pVal = getProfileVal();
-        if (cardOverrides[currentIndex]?.[h]?.visible !== undefined) return cardOverrides[currentIndex][h].visible;
-        if (pVal && profileSettings[pVal]?.fields?.[h] !== undefined) return profileSettings[pVal].fields[h];
-        return fieldConfigs[h].visible;
-    }
-
-    function updateScopeText() {
-        if (isEditMode) {
-            const v = scopeSelect.value;
-            currentScopeText.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-            return;
-        }
-        const pVal = getProfileVal();
-        if (cardOverrides[currentIndex] && Object.keys(cardOverrides[currentIndex]).length > 0) { currentScopeText.textContent = 'Card'; return; }
-        if (pVal) {
-            const hasV = profileSettings[pVal]?.fields && Object.keys(profileSettings[pVal].fields).length > 0;
-            const hasS = profileStyleOverrides[pVal] && Object.keys(profileStyleOverrides[pVal]).length > 0;
-            if (hasV || hasS) { currentScopeText.textContent = 'Profile'; return; }
-        }
-        currentScopeText.textContent = 'Global';
-    }
-
-    // ── Inline on-card editor ─────────────────────────────────────────────────
-    function openInlineEditor(header) {
-        closeInlineEditor(true);
-
-        const conf = getConfigByScope(header);
-        const alignment = conf.textAlign || 'center';
-
-        const ed = document.createElement('div');
-        ed.contentEditable = 'true';
-        ed.spellcheck = false;
-        ed.dataset.header = header;
-
-        ed.style.position    = 'absolute';
-        ed.style.zIndex      = '200';
-        ed.style.top         = conf.top + 'px';
-        ed.style.left        = conf.left + 'px';
-        ed.style.width       = conf.width + 'px';
-        ed.style.minHeight   = conf.height + 'px';
-        ed.style.fontSize    = conf.fontSize + 'px';
-        ed.style.fontWeight  = String(conf.fontWeight);
-        ed.style.color       = conf.color;
-        ed.style.fontStyle   = conf.fontStyle || 'normal';
-        ed.style.fontFamily  = "'Inter', sans-serif";
-        ed.style.textAlign   = alignment;
-        ed.style.lineHeight  = '1.1';
-        ed.style.wordBreak   = 'break-word';
-        ed.style.whiteSpace  = 'pre-wrap';
-        ed.style.boxSizing   = 'border-box';
-        ed.style.padding     = '2px 4px';
-        ed.style.outline     = '2px solid #f97316';
-        ed.style.borderRadius = '3px';
-        ed.style.background  = 'rgba(255,255,255,0.93)';
-        ed.style.cursor      = 'text';
-
-        ed.textContent = getEffectiveText(header);
-
-        ed.addEventListener('input', () => {
-            if (!cardTextOverrides[currentIndex]) cardTextOverrides[currentIndex] = {};
-            cardTextOverrides[currentIndex][header] = ed.textContent;
-            const display = fieldsContainer.querySelector('[data-field="' + header + '"]');
-            if (display) display.textContent = ed.textContent;
-            updateColumnUI();
-        });
-
-        ed.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape')               { closeInlineEditor(false); e.preventDefault(); }
-            if (e.key === 'Enter' && !e.shiftKey) { closeInlineEditor(true);  e.preventDefault(); }
-            e.stopPropagation();
-        });
-
-        ed.addEventListener('blur', () => {
-            setTimeout(() => { if (activeEditor) closeInlineEditor(true); }, 200);
-        });
-
-        cardPreview.appendChild(ed);
-        activeEditor = ed;
-
-        ed.focus();
-        try {
-            const range = document.createRange();
-            range.selectNodeContents(ed);
-            range.collapse(false);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-        } catch(err) {}
-    }
-    function closeInlineEditor(save) {
-        if (!activeEditor) return;
-        const header = activeEditor.dataset.header;
-        if (save && header) {
-            const span = activeEditor.querySelector('span');
-            const txt = span ? span.textContent : activeEditor.textContent;
-            if (!cardTextOverrides[currentIndex]) cardTextOverrides[currentIndex] = {};
-            cardTextOverrides[currentIndex][header] = txt;
-        }
-        activeEditor.remove();
-        activeEditor = null;
-        render();
-    }
-
-    // ── Alignment ──────────────────────────────────────────────────────────────
-    function saveAlignChange(alignment) {
-        saveStyleChange('textAlign', alignment);
-        updateAlignButtons(alignment);
-        if (activeEditor) {
-            activeEditor.className = `inline-editor align-${alignment}`;
-        }
-    }
-
-    function updateAlignButtons(alignment) {
-        document.getElementById('btnAlignLeft').classList.toggle('active',   alignment === 'left');
-        document.getElementById('btnAlignCenter').classList.toggle('active', alignment === 'center');
-        document.getElementById('btnAlignRight').classList.toggle('active',  alignment === 'right');
-    }
-
-    document.getElementById('btnAlignLeft').onclick   = () => saveAlignChange('left');
-    document.getElementById('btnAlignCenter').onclick = () => saveAlignChange('center');
-    document.getElementById('btnAlignRight').onclick  = () => saveAlignChange('right');
-
-    // ── Event wiring ───────────────────────────────────────────────────────────
-    document.getElementById('dropZoneData').onclick      = () => document.getElementById('fileInput').click();
-    document.getElementById('fileInput').onchange        = (e) => processDataFile(e.target.files[0]);
-    document.getElementById('dropZoneTemplates').onclick = () => document.getElementById('templateFiles').click();
-    document.getElementById('templateFiles').onchange    = (e) => handleTemplates(e.target.files);
-    document.getElementById('prevBtn').onclick           = () => { if (currentIndex > 0) { currentIndex--; render(); } };
-    document.getElementById('nextBtn').onclick           = () => { if (currentIndex < data.length - 1) { currentIndex++; render(); } };
-    document.getElementById('cardSelector').onchange    = (e) => { currentIndex = parseInt(e.target.value); render(); };
-    document.getElementById('downloadCurrentBtn').onclick = downloadCurrent;
-    document.getElementById('exportAllBtn').onclick       = exportAllCards;
-
-    document.getElementById('toggleEditBtn').onclick = () => {
-        isEditMode = !isEditMode;
-        closeInlineEditor(true);
-        document.getElementById('formatToolbar').classList.toggle('hidden', !isEditMode);
-        document.getElementById('toggleEditBtn').textContent = isEditMode ? 'Exit Editor' : 'Edit Layout';
-        if (!isEditMode) { selectedHeader = null; isStyleMode = false; document.getElementById('modeToggle').checked = false; }
-        else { scopeSelect.value = 'global'; }
-        render();
-    };
-
-    document.getElementById('modeToggle').onchange = (e) => { isStyleMode = e.target.checked; updateToolbarUI(); };
-    scopeSelect.onchange    = () => { updateScopeText(); render(); };
-    triggerColSelect.onchange = () => { render(); };
-
-    // ── Data loading ───────────────────────────────────────────────────────────
-    async function processDataFile(file) {
-        if (!file) return;
-        document.getElementById('fileNameLabel').textContent = file.name;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-            data = json.filter(row => Object.values(row).join('').trim().length > 0);
-            headers = Object.keys(json[0]);
-            document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
-
-            triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
-            headers.forEach(h => {
-                const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
-                triggerColSelect.appendChild(opt);
-            });
-            triggerColSelect.classList.remove('hidden');
-
-            headers.forEach((h, i) => {
-                if (h.toLowerCase().match(/art|image|template/)) return;
-                if (!fieldConfigs[h]) fieldConfigs[h] = {
-                    visible: true, top: 60 + i * 60, left: 25, width: 325, height: 45,
-                    fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center'
-                };
-            });
-            populateSelector();
-            render();
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    function populateSelector() {
-        const sel = document.getElementById('cardSelector');
-        sel.innerHTML = '';
-        data.forEach((row, i) => {
-            const name = Object.values(row)[0] || `Card ${i+1}`;
-            const opt = document.createElement('option');
-            opt.value = i; opt.textContent = `${i+1}: ${name}`;
-            sel.appendChild(opt);
-        });
-    }
-
-    function handleTemplates(files) {
-        Array.from(files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                templateAssets[file.name] = ev.target.result;
-                if (!globalTemplateName) globalTemplateName = file.name;
-                updateTemplateLibrary();
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function updateTemplateLibrary() {
-        const lib = document.getElementById('templateLibrary');
-        lib.innerHTML = '';
-        Object.keys(templateAssets).forEach(name => {
-            const wrapper = document.createElement('div');
-            wrapper.className = `cursor-pointer rounded border-2 overflow-hidden ${globalTemplateName === name ? 'border-orange-500' : 'border-zinc-800'}`;
-            wrapper.onclick = () => { globalTemplateName = name; render(); updateTemplateLibrary(); };
-            wrapper.innerHTML = `<img src="${templateAssets[name]}" class="w-full aspect-[2.5/3.5] object-cover">`;
-            lib.appendChild(wrapper);
-        });
-        render();
-    }
-
-    // ── Render ─────────────────────────────────────────────────────────────────
-    function render(forExport = false) {
-        fieldsContainer.innerHTML = '';
-        interactionLayer.innerHTML = '';
-
-        if (data.length === 0) return;
-
-        const row = data[currentIndex];
-        const pVal = getProfileVal() || '';
-
-        document.getElementById('activeProfileDisplay').textContent = pVal ? `Profile: ${pVal}` : 'Global Context';
-
-        let finalTemplateName = globalTemplateName;
-        if (pVal && profileSettings[pVal]?.frame) finalTemplateName = profileSettings[pVal].frame;
-        const finalTemplate = templateAssets[finalTemplateName];
-        document.getElementById('templateLayer').style.backgroundImage = finalTemplate ? `url('${finalTemplate}')` : 'none';
-
-        const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
-        document.getElementById('artLayer').style.backgroundImage = (artCol && row[artCol]) ? `url('${row[artCol]}')` : 'none';
-
-        headers.forEach(h => {
-            if (h.toLowerCase().match(/art|image|template/)) return;
-            if (!getVisibilityByScope(h)) return;
-
-            const conf = getConfigByScope(h);
-            const alignment = conf.textAlign || 'center';
-
-            // Display div (hidden behind editor when editing)
-            const div = document.createElement('div');
-            div.className = `dynamic-field align-${alignment}`;
-            div.dataset.field = h;
-            if (forExport) div.classList.add('export-nudge');
-            div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};`;
-            div.textContent = getEffectiveText(h);
-            fieldsContainer.appendChild(div);
-
-            // Interaction box (edit mode only)
-            if (isEditMode && !forExport) {
-                const interact = document.createElement('div');
-                interact.className = `interaction-box ${selectedHeader === h ? 'active-field' : ''}`;
-                interact.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;`;
-                interact.setAttribute('data-header', h);
-
-                if (selectedHeader === h) {
-                    const resizer = document.createElement('div');
-                    resizer.className = 'resize-handle';
-                    resizer.setAttribute('data-type', 'resize');
-                    interact.appendChild(resizer);
-                    document.getElementById('coordsBox').textContent = `${h}: ${conf.left}, ${conf.top}`;
-                }
-                interactionLayer.appendChild(interact);
-            }
-        });
-
-        if (!forExport) {
-            updateColumnUI();
-            updateProfileUI();
-            updateScopeText();
-        }
-    }
-
-    // ── Profile UI ─────────────────────────────────────────────────────────────
-    function updateProfileUI() {
-        const trigger = triggerColSelect.value;
-        if (!trigger) { profileContainer.innerHTML = ''; return; }
-
-        const uniqueValues = [...new Set(data.map(row => String(row[trigger] || '').trim()))].filter(Boolean);
-        const currentCardPVal = String(data[currentIndex][trigger] || '').trim();
-        profileContainer.innerHTML = '';
-
-        uniqueValues.forEach(val => {
-            if (!profileSettings[val]) profileSettings[val] = { frame: '', fields: {} };
-            const settings = profileSettings[val];
-            const isActive = val === currentCardPVal;
-            const card = document.createElement('div');
-            card.className = `profile-card ${isActive ? 'active-profile' : ''}`;
-
-            let frameOptions = '<option value="">Default Frame</option>';
-            Object.keys(templateAssets).forEach(name => {
-                frameOptions += `<option value="${name}" ${settings.frame === name ? 'selected' : ''}>${name}</option>`;
-            });
-
-            card.innerHTML = `
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex flex-col">
-                        <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Profile Name</span>
-                        <div class="text-[11px] font-black text-white uppercase tracking-tighter">${val}</div>
-                    </div>
-                    ${isActive ? '<div class="text-[7px] font-black bg-orange-600 text-white px-2 py-0.5 rounded tracking-widest">ACTIVE</div>' : ''}
-                </div>
-                <div class="mb-3">
-                    <label class="text-[8px] font-black text-zinc-500 uppercase block mb-1">Frame Reference</label>
-                    <select data-profile="${val}" class="profile-frame-select w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] text-orange-400 outline-none">
-                        ${frameOptions}
-                    </select>
-                </div>
-                <div class="mt-4 border-t border-zinc-800 pt-3 space-y-2">
-                    <span class="text-[8px] font-black text-zinc-500 uppercase block mb-2">Layer Overrides</span>
-                    ${headers.map(h => {
-                        if (h.toLowerCase().match(/art|image|template/)) return '';
-                        const isVisible = settings.fields[h] !== undefined ? settings.fields[h] : fieldConfigs[h].visible;
-                        return `<div class="flex items-center justify-between">
-                            <span class="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">${h}</span>
-                            <input type="checkbox" data-profile="${val}" data-header="${h}" ${isVisible ? 'checked' : ''} class="profile-field-toggle accent-orange-500 w-3 h-3">
-                        </div>`;
-                    }).join('')}
-                </div>`;
-
-            card.querySelector('.profile-frame-select').onchange = (e) => { profileSettings[val].frame = e.target.value; render(); };
-            card.querySelectorAll('.profile-field-toggle').forEach(chk => {
-                chk.onchange = (e) => { profileSettings[val].fields[e.target.getAttribute('data-header')] = e.target.checked; render(); };
-            });
-            profileContainer.appendChild(card);
-        });
-    }
-
-    // ── Column UI ──────────────────────────────────────────────────────────────
-    function updateColumnUI() {
-        columnList.innerHTML = '';
-        headers.forEach(h => {
-            if (h.toLowerCase().match(/art|image|template/)) return;
-            const isVisible = getVisibilityByScope(h);
-            const hasTextOverride = cardTextOverrides[currentIndex]?.[h] !== undefined;
-            const item = document.createElement('div');
-            item.className = `flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${selectedHeader === h ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-900/50 border border-transparent'}`;
-            item.onclick = () => { selectedHeader = h; render(); updateToolbarUI(); };
-            item.innerHTML = `
-                <span class="text-[10px] font-bold ${selectedHeader === h ? 'text-white' : 'text-zinc-500'} uppercase flex items-center gap-1">
-                    ${h}
-                    ${hasTextOverride ? '<span class="text-[7px] text-orange-400 font-black bg-orange-500/10 px-1 rounded">EDITED</span>' : ''}
-                </span>
-                <input type="checkbox" ${isVisible ? 'checked' : ''} class="accent-orange-500 col-vis-toggle">`;
-
-            item.querySelector('.col-vis-toggle').onclick = (e) => {
-                e.stopPropagation();
-                const newVal = e.target.checked;
-                const targetScope = scopeSelect.value;
-                const pVal = getProfileVal();
-                if (targetScope === 'card') {
-                    if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
-                    if (!cardOverrides[currentIndex][h]) cardOverrides[currentIndex][h] = JSON.parse(JSON.stringify(getConfigByScope(h)));
-                    cardOverrides[currentIndex][h].visible = newVal;
-                } else if (targetScope === 'profile' && pVal) {
-                    if (!profileSettings[pVal].fields) profileSettings[pVal].fields = {};
-                    profileSettings[pVal].fields[h] = newVal;
-                } else {
-                    fieldConfigs[h].visible = newVal;
-                }
-                render();
-            };
-            columnList.appendChild(item);
-        });
-    }
-
-    // ── Toolbar UI ─────────────────────────────────────────────────────────────
-    function updateToolbarUI() {
-        const styleControls = document.getElementById('styleControls');
-        if (isEditMode && isStyleMode && selectedHeader) {
-            styleControls.classList.remove('hidden');
-            const conf = getConfigByScope(selectedHeader);
-            document.getElementById('fontSizeSlider').value = conf.fontSize;
-            document.getElementById('fontSizeDisplay').textContent = `${conf.fontSize}`;
-            document.getElementById('fontColorPicker').value = conf.color;
-            updateAlignButtons(conf.textAlign || 'center');
-        } else {
-            styleControls.classList.add('hidden');
-        }
-        // Update mode hint label under the toggle
-        const hint = document.getElementById('modeHint');
-        if (hint) {
-            if (isStyleMode) {
-                hint.textContent = '✦ Style mode — drag, resize, or double-click to edit';
-                hint.style.color = '#f97316';
-            } else {
-                hint.textContent = '▶ Move mode — toggle Style for more options';
-                hint.style.color = '#60a5fa';
-            }
-        }
-        updateScopeText();
-    }
-
-    // ── Drag / resize ──────────────────────────────────────────────────────────
-
-    // Separate dblclick handler — only active in style mode
-    interactionLayer.addEventListener('dblclick', (e) => {
-        if (!isEditMode || !isStyleMode) return;
-        const target = e.target.closest('.interaction-box');
-        if (!target) return;
-        const type = e.target.getAttribute('data-type');
-        if (type === 'resize') return;
-        const header = target.getAttribute('data-header');
-        selectedHeader = header;
-        dragInfo.active = false;
-        openInlineEditor(header);
+    // Build a map of token -> icon for fast lookup
+    const tokenMap = {};
+    iconLibrary.forEach(icon => {
+        if (icon.token) tokenMap[icon.token.toLowerCase()] = icon;
     });
 
-    interactionLayer.addEventListener('pointerdown', (e) => {
-        if (!isEditMode) return;
-        const target = e.target.closest('.interaction-box');
-        if (!target) {
-            selectedHeader = null;
-            closeInlineEditor(true);
-            render();
-            updateToolbarUI();
-            return;
+    if (Object.keys(tokenMap).length === 0) {
+        return [{ type: 'text', value: text }];
+    }
+
+    // Match any {…} token (non-greedy)
+    const segments = [];
+    const regex = /\{([^}]+)\}/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+        const tokenKey = match[1].toLowerCase();
+        const icon = tokenMap[tokenKey];
+
+        // Text before this token
+        if (match.index > lastIndex) {
+            segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
         }
 
-        const header = target.getAttribute('data-header');
-        const type = e.target.getAttribute('data-type') === 'resize' ? 'resize' : 'drag';
+        if (icon) {
+            segments.push({ type: 'icon', icon });
+        } else {
+            // Unknown token — keep as-is so user knows it's unrecognised
+            segments.push({ type: 'text', value: match[0] });
+        }
 
-        // Update selected highlight without full re-render so dblclick still works
-        if (selectedHeader !== header) {
-            interactionLayer.querySelectorAll('.interaction-box').forEach(b => {
-                b.classList.toggle('active-field', b.getAttribute('data-header') === header);
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Remaining text after last match
+    if (lastIndex < text.length) {
+        segments.push({ type: 'text', value: text.slice(lastIndex) });
+    }
+
+    return segments;
+}
+
+/**
+ * Build the innerHTML for a field div, replacing tokens with <img> inline icons.
+ * fontSize is the field's font size in px; icon scales relative to that.
+ */
+function buildRichHTML(text, fontSize) {
+    const segments = parseTextWithIcons(text);
+    let html = '';
+
+    segments.forEach(seg => {
+        if (seg.type === 'text') {
+            // Escape HTML entities
+            html += seg.value
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        } else {
+            const icon = seg.icon;
+            // Scale: default 1.0 = match cap-height (~0.85em feels like emoji)
+            const emSize = (icon.scale || 1.0) * 1.1;
+            html += `<img src="${icon.src}" class="inline-icon" style="width:${emSize}em;height:${emSize}em;" alt="" draggable="false">`;
+        }
+    });
+
+    return html;
+}
+
+/**
+ * Check if a raw text string has any mapped icon tokens.
+ */
+function textHasIcons(text) {
+    if (!text || iconLibrary.length === 0) return false;
+    const tokenMap = {};
+    iconLibrary.forEach(icon => { if (icon.token) tokenMap[icon.token.toLowerCase()] = true; });
+    return /\{([^}]+)\}/.test(text) && Object.keys(tokenMap).some(t => text.toLowerCase().includes(`{${t}}`));
+}
+
+// ── Icon Library UI ────────────────────────────────────────────────────────
+
+function renderIconLibrary() {
+    const list = document.getElementById('iconLibraryList');
+    list.innerHTML = '';
+
+    iconLibrary.forEach(icon => {
+        const entry = document.createElement('div');
+        entry.className = 'icon-entry';
+        entry.dataset.iconId = icon.id;
+
+        entry.innerHTML = `
+            <img src="${icon.src}" class="icon-thumb" alt="">
+            <div class="flex flex-col gap-1.5 flex-1 min-w-0">
+                <input
+                    type="text"
+                    class="icon-token-input"
+                    placeholder="{token}"
+                    value="${icon.token ? '{' + icon.token + '}' : ''}"
+                    data-icon-id="${icon.id}"
+                    spellcheck="false"
+                >
+                <span class="text-[7px] font-bold text-zinc-600 uppercase tracking-widest">Type {token} in your Excel cell</span>
+            </div>
+            <div class="icon-scale-wrap">
+                <label>Size</label>
+                <div class="icon-scale-corner" data-icon-id="${icon.id}" title="Drag to resize"></div>
+                <span class="text-[8px] font-mono text-zinc-500 icon-scale-label">${(icon.scale||1).toFixed(1)}×</span>
+            </div>
+            <button class="icon-delete-btn" data-icon-id="${icon.id}" title="Remove icon">×</button>
+        `;
+
+        // Token input handler — strip braces from input
+        entry.querySelector('.icon-token-input').addEventListener('input', (e) => {
+            let val = e.target.value.replace(/[{}]/g, '').trim();
+            const idx = iconLibrary.findIndex(ic => ic.id === icon.id);
+            if (idx !== -1) iconLibrary[idx].token = val;
+            render();
+        });
+
+        entry.querySelector('.icon-token-input').addEventListener('blur', (e) => {
+            // Normalise display to always show without braces (user types either way)
+            let val = e.target.value.replace(/[{}]/g, '').trim();
+            e.target.value = val ? `{${val}}` : '';
+        });
+
+        // Delete button
+        entry.querySelector('.icon-delete-btn').addEventListener('click', () => {
+            iconLibrary = iconLibrary.filter(ic => ic.id !== icon.id);
+            renderIconLibrary();
+            render();
+        });
+
+        // Corner drag to resize (proportional scale)
+        const corner = entry.querySelector('.icon-scale-corner');
+        corner.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const idx = iconLibrary.findIndex(ic => ic.id === icon.id);
+            iconScaleDrag = { id: icon.id, idx, startX: e.clientX, startScale: iconLibrary[idx].scale || 1.0 };
+            corner.classList.add('dragging');
+            corner.setPointerCapture(e.pointerId);
+        });
+
+        corner.addEventListener('pointermove', (e) => {
+            if (!iconScaleDrag || iconScaleDrag.id !== icon.id) return;
+            const dx = e.clientX - iconScaleDrag.startX;
+            const newScale = Math.max(0.3, Math.min(5, iconScaleDrag.startScale + dx * 0.02));
+            iconLibrary[iconScaleDrag.idx].scale = Math.round(newScale * 10) / 10;
+            // Update label live
+            const label = entry.querySelector('.icon-scale-label');
+            if (label) label.textContent = iconLibrary[iconScaleDrag.idx].scale.toFixed(1) + '×';
+            render();
+        });
+
+        corner.addEventListener('pointerup', () => {
+            if (iconScaleDrag) {
+                iconScaleDrag = null;
+                corner.classList.remove('dragging');
+            }
+        });
+
+        list.appendChild(entry);
+    });
+}
+
+// Icon file upload handler
+document.getElementById('iconDropZone').addEventListener('click', () => {
+    document.getElementById('iconFileInput').click();
+});
+
+document.getElementById('iconFileInput').addEventListener('change', (e) => {
+    handleIconFiles(e.target.files);
+    e.target.value = ''; // reset so same file can be re-added
+});
+
+// Drag-and-drop onto icon zone
+document.getElementById('iconDropZone').addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = '#f97316';
+});
+
+document.getElementById('iconDropZone').addEventListener('dragleave', (e) => {
+    e.currentTarget.style.borderColor = '';
+});
+
+document.getElementById('iconDropZone').addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = '';
+    if (e.dataTransfer.files.length) handleIconFiles(e.dataTransfer.files);
+});
+
+function handleIconFiles(files) {
+    Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            // Derive a default token from filename (strip extension, lowercase, no spaces)
+            const baseName = file.name.replace(/\.[^.]+$/, '').replace(/\s+/g, '_').toLowerCase();
+            iconLibrary.push({
+                id: 'icon_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+                src: ev.target.result,
+                token: baseName,
+                scale: 1.0
             });
-            // Add resize handle to active box
-            const activeBox = interactionLayer.querySelector('.interaction-box.active-field');
-            if (activeBox && !activeBox.querySelector('.resize-handle')) {
+            renderIconLibrary();
+            render();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function getProfileVal() {
+    const t = triggerColSelect.value;
+    return t ? String(data[currentIndex]?.[t] || '').trim() : null;
+}
+
+function getEffectiveText(h) {
+    if (cardTextOverrides[currentIndex]?.[h] !== undefined) return cardTextOverrides[currentIndex][h];
+    return data[currentIndex]?.[h] ?? '';
+}
+
+function getConfigByScope(h) {
+    const pVal = getProfileVal();
+    if (cardOverrides[currentIndex]?.[h])         return cardOverrides[currentIndex][h];
+    if (pVal && profileStyleOverrides[pVal]?.[h]) return profileStyleOverrides[pVal][h];
+    return fieldConfigs[h];
+}
+
+function getVisibilityByScope(h) {
+    const pVal = getProfileVal();
+    if (cardOverrides[currentIndex]?.[h]?.visible !== undefined) return cardOverrides[currentIndex][h].visible;
+    if (pVal && profileSettings[pVal]?.fields?.[h] !== undefined) return profileSettings[pVal].fields[h];
+    return fieldConfigs[h].visible;
+}
+
+function updateScopeText() {
+    if (isEditMode) {
+        const v = scopeSelect.value;
+        currentScopeText.textContent = v.charAt(0).toUpperCase() + v.slice(1);
+        return;
+    }
+    const pVal = getProfileVal();
+    if (cardOverrides[currentIndex] && Object.keys(cardOverrides[currentIndex]).length > 0) { currentScopeText.textContent = 'Card'; return; }
+    if (pVal) {
+        const hasV = profileSettings[pVal]?.fields && Object.keys(profileSettings[pVal].fields).length > 0;
+        const hasS = profileStyleOverrides[pVal] && Object.keys(profileStyleOverrides[pVal]).length > 0;
+        if (hasV || hasS) { currentScopeText.textContent = 'Profile'; return; }
+    }
+    currentScopeText.textContent = 'Global';
+}
+
+// ── Inline on-card editor ─────────────────────────────────────────────────
+function openInlineEditor(header) {
+    closeInlineEditor(true);
+    const conf = getConfigByScope(header);
+    const alignment = conf.textAlign || 'center';
+
+    const ed = document.createElement('div');
+    ed.contentEditable = 'true';
+    ed.spellcheck = false;
+    ed.dataset.header = header;
+    ed.style.position   = 'absolute';
+    ed.style.zIndex     = '200';
+    ed.style.top        = conf.top + 'px';
+    ed.style.left       = conf.left + 'px';
+    ed.style.width      = conf.width + 'px';
+    ed.style.minHeight  = conf.height + 'px';
+    ed.style.fontSize   = conf.fontSize + 'px';
+    ed.style.fontWeight = String(conf.fontWeight);
+    ed.style.color      = conf.color;
+    ed.style.fontStyle  = conf.fontStyle || 'normal';
+    ed.style.fontFamily = "'Inter', sans-serif";
+    ed.style.textAlign  = alignment;
+    ed.style.lineHeight = '1.1';
+    ed.style.wordBreak  = 'break-word';
+    ed.style.whiteSpace = 'pre-wrap';
+    ed.style.boxSizing  = 'border-box';
+    ed.style.padding    = '2px 4px';
+    ed.style.outline    = '2px solid #f97316';
+    ed.style.borderRadius = '3px';
+    ed.style.background = 'rgba(255,255,255,0.93)';
+    ed.style.cursor     = 'text';
+
+    // Editor shows raw text (with {tokens}) so user can edit them
+    ed.textContent = getEffectiveText(header);
+
+    ed.addEventListener('input', () => {
+        if (!cardTextOverrides[currentIndex]) cardTextOverrides[currentIndex] = {};
+        cardTextOverrides[currentIndex][header] = ed.textContent;
+        // Update the display field live with icon rendering
+        const display = fieldsContainer.querySelector('[data-field="' + header + '"]');
+        if (display) {
+            const rawText = ed.textContent;
+            const conf2 = getConfigByScope(header);
+            if (textHasIcons(rawText)) {
+                display.innerHTML = buildRichHTML(rawText, conf2.fontSize);
+            } else {
+                display.textContent = rawText;
+            }
+        }
+        updateColumnUI();
+    });
+
+    ed.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape')               { closeInlineEditor(false); e.preventDefault(); }
+        if (e.key === 'Enter' && !e.shiftKey) { closeInlineEditor(true);  e.preventDefault(); }
+        e.stopPropagation();
+    });
+
+    ed.addEventListener('blur', () => {
+        setTimeout(() => { if (activeEditor) closeInlineEditor(true); }, 200);
+    });
+
+    cardPreview.appendChild(ed);
+    activeEditor = ed;
+    ed.focus();
+
+    try {
+        const range = document.createRange();
+        range.selectNodeContents(ed);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    } catch(err) {}
+}
+
+function closeInlineEditor(save) {
+    if (!activeEditor) return;
+    const header = activeEditor.dataset.header;
+    if (save && header) {
+        const txt = activeEditor.textContent;
+        if (!cardTextOverrides[currentIndex]) cardTextOverrides[currentIndex] = {};
+        cardTextOverrides[currentIndex][header] = txt;
+    }
+    activeEditor.remove();
+    activeEditor = null;
+    render();
+}
+
+// ── Alignment ──────────────────────────────────────────────────────────────
+function saveAlignChange(alignment) {
+    saveStyleChange('textAlign', alignment);
+    updateAlignButtons(alignment);
+    if (activeEditor) {
+        activeEditor.style.textAlign = alignment;
+    }
+}
+
+function updateAlignButtons(alignment) {
+    document.getElementById('btnAlignLeft').classList.toggle('active',   alignment === 'left');
+    document.getElementById('btnAlignCenter').classList.toggle('active', alignment === 'center');
+    document.getElementById('btnAlignRight').classList.toggle('active',  alignment === 'right');
+}
+
+document.getElementById('btnAlignLeft').onclick   = () => saveAlignChange('left');
+document.getElementById('btnAlignCenter').onclick = () => saveAlignChange('center');
+document.getElementById('btnAlignRight').onclick  = () => saveAlignChange('right');
+
+// ── Event wiring ───────────────────────────────────────────────────────────
+document.getElementById('dropZoneData').onclick      = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange        = (e) => processDataFile(e.target.files[0]);
+document.getElementById('dropZoneTemplates').onclick = () => document.getElementById('templateFiles').click();
+document.getElementById('templateFiles').onchange    = (e) => handleTemplates(e.target.files);
+document.getElementById('prevBtn').onclick           = () => { if (currentIndex > 0) { currentIndex--; render(); } };
+document.getElementById('nextBtn').onclick           = () => { if (currentIndex < data.length - 1) { currentIndex++; render(); } };
+document.getElementById('cardSelector').onchange     = (e) => { currentIndex = parseInt(e.target.value); render(); };
+document.getElementById('downloadCurrentBtn').onclick = downloadCurrent;
+document.getElementById('exportAllBtn').onclick       = exportAllCards;
+
+document.getElementById('toggleEditBtn').onclick = () => {
+    isEditMode = !isEditMode;
+    closeInlineEditor(true);
+    document.getElementById('formatToolbar').classList.toggle('hidden', !isEditMode);
+    document.getElementById('toggleEditBtn').textContent = isEditMode ? 'Exit Editor' : 'Edit Layout';
+    if (!isEditMode) { selectedHeader = null; isStyleMode = false; document.getElementById('modeToggle').checked = false; }
+    else { scopeSelect.value = 'global'; }
+    render();
+};
+
+document.getElementById('modeToggle').onchange = (e) => { isStyleMode = e.target.checked; updateToolbarUI(); };
+scopeSelect.onchange    = () => { updateScopeText(); render(); };
+triggerColSelect.onchange = () => { render(); };
+
+// ── Data loading ───────────────────────────────────────────────────────────
+async function processDataFile(file) {
+    if (!file) return;
+    document.getElementById('fileNameLabel').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+        data = json.filter(row => Object.values(row).join('').trim().length > 0);
+        headers = Object.keys(json[0]);
+        document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
+
+        triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
+        headers.forEach(h => {
+            const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
+            triggerColSelect.appendChild(opt);
+        });
+        triggerColSelect.classList.remove('hidden');
+
+        headers.forEach((h, i) => {
+            if (h.toLowerCase().match(/art|image|template/)) return;
+            if (!fieldConfigs[h]) fieldConfigs[h] = {
+                visible: true, top: 60 + i * 60, left: 25, width: 325, height: 45,
+                fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center'
+            };
+        });
+
+        populateSelector();
+        render();
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function populateSelector() {
+    const sel = document.getElementById('cardSelector');
+    sel.innerHTML = '';
+    data.forEach((row, i) => {
+        const name = Object.values(row)[0] || `Card ${i+1}`;
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${i+1}: ${name}`;
+        sel.appendChild(opt);
+    });
+}
+
+function handleTemplates(files) {
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            templateAssets[file.name] = ev.target.result;
+            if (!globalTemplateName) globalTemplateName = file.name;
+            updateTemplateLibrary();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function updateTemplateLibrary() {
+    const lib = document.getElementById('templateLibrary');
+    lib.innerHTML = '';
+    Object.keys(templateAssets).forEach(name => {
+        const wrapper = document.createElement('div');
+        wrapper.className = `cursor-pointer rounded border-2 overflow-hidden ${globalTemplateName === name ? 'border-orange-500' : 'border-zinc-800'}`;
+        wrapper.onclick = () => { globalTemplateName = name; render(); updateTemplateLibrary(); };
+        wrapper.innerHTML = `<img src="${templateAssets[name]}" class="w-full aspect-[2.5/3.5] object-cover">`;
+        lib.appendChild(wrapper);
+    });
+    render();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render(forExport = false) {
+    fieldsContainer.innerHTML = '';
+    interactionLayer.innerHTML = '';
+    if (data.length === 0) return;
+
+    const row = data[currentIndex];
+    const pVal = getProfileVal() || '';
+    document.getElementById('activeProfileDisplay').textContent = pVal ? `Profile: ${pVal}` : 'Global Context';
+
+    let finalTemplateName = globalTemplateName;
+    if (pVal && profileSettings[pVal]?.frame) finalTemplateName = profileSettings[pVal].frame;
+    const finalTemplate = templateAssets[finalTemplateName];
+    document.getElementById('templateLayer').style.backgroundImage = finalTemplate ? `url('${finalTemplate}')` : 'none';
+
+    const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
+    document.getElementById('artLayer').style.backgroundImage = (artCol && row[artCol]) ? `url('${row[artCol]}')` : 'none';
+
+    headers.forEach(h => {
+        if (h.toLowerCase().match(/art|image|template/)) return;
+        if (!getVisibilityByScope(h)) return;
+
+        const conf = getConfigByScope(h);
+        const alignment = conf.textAlign || 'center';
+        const rawText = String(getEffectiveText(h));
+
+        // Display div
+        const div = document.createElement('div');
+        div.className = `dynamic-field align-${alignment}`;
+        div.dataset.field = h;
+        if (forExport) div.classList.add('export-nudge');
+        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};`;
+
+        // Decide: plain text or rich (has icons)?
+        if (textHasIcons(rawText)) {
+            // Wrap in a span so the flex container aligns it correctly
+            const span = document.createElement('span');
+            span.className = 'field-rich-content';
+            span.innerHTML = buildRichHTML(rawText, conf.fontSize);
+            div.appendChild(span);
+        } else {
+            div.textContent = rawText;
+        }
+
+        fieldsContainer.appendChild(div);
+
+        // Interaction box (edit mode only)
+        if (isEditMode && !forExport) {
+            const interact = document.createElement('div');
+            interact.className = `interaction-box ${selectedHeader === h ? 'active-field' : ''}`;
+            interact.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;`;
+            interact.setAttribute('data-header', h);
+
+            if (selectedHeader === h) {
                 const resizer = document.createElement('div');
                 resizer.className = 'resize-handle';
                 resizer.setAttribute('data-type', 'resize');
-                activeBox.appendChild(resizer);
+                interact.appendChild(resizer);
+                document.getElementById('coordsBox').textContent = `${h}: ${conf.left}, ${conf.top}`;
             }
-            selectedHeader = header;
-            updateToolbarUI();
+
+            interactionLayer.appendChild(interact);
         }
-
-        if (isStyleMode && type === 'drag') return;
-
-        const currentConf = getConfigByScope(header);
-        dragInfo = { active: true, type, header, startX: e.clientX, startY: e.clientY, initialConfig: JSON.parse(JSON.stringify(currentConf)) };
-        interactionLayer.setPointerCapture(e.pointerId);
     });
 
-    interactionLayer.addEventListener('pointermove', (e) => {
-        if (!dragInfo.active) return;
-        const targetScope = scopeSelect.value;
-        const pVal = getProfileVal();
-        let ts;
-        if (targetScope === 'card') {
-            if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
-            if (!cardOverrides[currentIndex][dragInfo.header]) cardOverrides[currentIndex][dragInfo.header] = JSON.parse(JSON.stringify(dragInfo.initialConfig));
-            ts = cardOverrides[currentIndex][dragInfo.header];
-        } else if (targetScope === 'profile' && pVal) {
-            if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
-            if (!profileStyleOverrides[pVal][dragInfo.header]) profileStyleOverrides[pVal][dragInfo.header] = JSON.parse(JSON.stringify(dragInfo.initialConfig));
-            ts = profileStyleOverrides[pVal][dragInfo.header];
-        } else { ts = fieldConfigs[dragInfo.header]; }
-
-        const dx = e.clientX - dragInfo.startX;
-        const dy = e.clientY - dragInfo.startY;
-        if (dragInfo.type === 'drag') {
-            ts.top  = Math.round(dragInfo.initialConfig.top  + dy);
-            ts.left = Math.round(dragInfo.initialConfig.left + dx);
-        } else {
-            ts.width  = Math.max(10, Math.round(dragInfo.initialConfig.width  + dx));
-            ts.height = Math.max(10, Math.round(dragInfo.initialConfig.height + dy));
-        }
-        render();
-    });
-
-    interactionLayer.addEventListener('pointerup', (e) => {
-        if (dragInfo.active) { dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); }
-    });
-
-    // ── Style change helper ────────────────────────────────────────────────────
-    function saveStyleChange(key, value) {
-        if (!selectedHeader) return;
-        const targetScope = scopeSelect.value;
-        const pVal = getProfileVal();
-        let target;
-        if (targetScope === 'card') {
-            if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
-            if (!cardOverrides[currentIndex][selectedHeader]) cardOverrides[currentIndex][selectedHeader] = JSON.parse(JSON.stringify(getConfigByScope(selectedHeader)));
-            target = cardOverrides[currentIndex][selectedHeader];
-        } else if (targetScope === 'profile' && pVal) {
-            if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
-            if (!profileStyleOverrides[pVal][selectedHeader]) profileStyleOverrides[pVal][selectedHeader] = JSON.parse(JSON.stringify(getConfigByScope(selectedHeader)));
-            target = profileStyleOverrides[pVal][selectedHeader];
-        } else { target = fieldConfigs[selectedHeader]; }
-        target[key] = value;
-        render();
+    if (!forExport) {
+        updateColumnUI();
+        updateProfileUI();
+        updateScopeText();
     }
+}
 
-    document.getElementById('fontSizeSlider').oninput = (e) => {
-        document.getElementById('fontSizeDisplay').textContent = e.target.value;
-        saveStyleChange('fontSize', parseInt(e.target.value));
-    };
-    document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
-    document.getElementById('btnBold').onclick = () => {
-        const conf = getConfigByScope(selectedHeader);
-        saveStyleChange('fontWeight', conf.fontWeight === 700 ? 400 : 700);
-    };
-    document.getElementById('btnItalic').onclick = () => {
-        const conf = getConfigByScope(selectedHeader);
-        saveStyleChange('fontStyle', conf.fontStyle === 'italic' ? 'normal' : 'italic');
-    };
+// ── Profile UI ─────────────────────────────────────────────────────────────
+function updateProfileUI() {
+    const trigger = triggerColSelect.value;
+    if (!trigger) { profileContainer.innerHTML = ''; return; }
 
-    // ── Export ─────────────────────────────────────────────────────────────────
-    async function captureCard() {
-        closeInlineEditor(true);
-        render(true);
-        const card = document.getElementById('cardPreview');
-        await new Promise(r => setTimeout(r, 120));
-        const canvas = await html2canvas(card, {
-            scale: 4, useCORS: true, allowTaint: true,
-            backgroundColor: null, logging: false,
-            foreignObjectRendering: false, imageTimeout: 15000,
+    const uniqueValues = [...new Set(data.map(row => String(row[trigger] || '').trim()))].filter(Boolean);
+    const currentCardPVal = String(data[currentIndex][trigger] || '').trim();
+
+    profileContainer.innerHTML = '';
+    uniqueValues.forEach(val => {
+        if (!profileSettings[val]) profileSettings[val] = { frame: '', fields: {} };
+        const settings = profileSettings[val];
+        const isActive = val === currentCardPVal;
+
+        const card = document.createElement('div');
+        card.className = `profile-card ${isActive ? 'active-profile' : ''}`;
+
+        let frameOptions = '<option value="">Default Frame</option>';
+        Object.keys(templateAssets).forEach(name => {
+            frameOptions += `<option value="${name}" ${settings.frame === name ? 'selected' : ''}>${name}</option>`;
         });
-        render(false);
-        return canvas;
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex flex-col">
+                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Profile Name</span>
+                    <div class="text-[11px] font-black text-white uppercase tracking-tighter">${val}</div>
+                </div>
+                ${isActive ? '<div class="text-[7px] font-black bg-orange-600 text-white px-2 py-0.5 rounded tracking-widest">ACTIVE</div>' : ''}
+            </div>
+            <div class="mb-3">
+                <label class="text-[8px] font-black text-zinc-500 uppercase block mb-1">Frame Reference</label>
+                <select data-profile="${val}" class="profile-frame-select w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] text-orange-400 outline-none">
+                    ${frameOptions}
+                </select>
+            </div>
+            <div class="mt-4 border-t border-zinc-800 pt-3 space-y-2">
+                <span class="text-[8px] font-black text-zinc-500 uppercase block mb-2">Layer Overrides</span>
+                ${headers.map(h => {
+                    if (h.toLowerCase().match(/art|image|template/)) return '';
+                    const isVisible = settings.fields[h] !== undefined ? settings.fields[h] : fieldConfigs[h].visible;
+                    return `<div class="flex items-center justify-between">
+                        <span class="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">${h}</span>
+                        <input type="checkbox" data-profile="${val}" data-header="${h}" ${isVisible ? 'checked' : ''} class="profile-field-toggle accent-orange-500 w-3 h-3">
+                    </div>`;
+                }).join('')}
+            </div>`;
+
+        card.querySelector('.profile-frame-select').onchange = (e) => { profileSettings[val].frame = e.target.value; render(); };
+        card.querySelectorAll('.profile-field-toggle').forEach(chk => {
+            chk.onchange = (e) => { profileSettings[val].fields[e.target.getAttribute('data-header')] = e.target.checked; render(); };
+        });
+
+        profileContainer.appendChild(card);
+    });
+}
+
+// ── Column UI ──────────────────────────────────────────────────────────────
+function updateColumnUI() {
+    columnList.innerHTML = '';
+    headers.forEach(h => {
+        if (h.toLowerCase().match(/art|image|template/)) return;
+        const isVisible = getVisibilityByScope(h);
+        const hasTextOverride = cardTextOverrides[currentIndex]?.[h] !== undefined;
+
+        // Check if this field's text currently has any icon tokens
+        const rawText = String(getEffectiveText(h));
+        const hasIcons = textHasIcons(rawText);
+
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${selectedHeader === h ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-900/50 border border-transparent'}`;
+        item.onclick = () => { selectedHeader = h; render(); updateToolbarUI(); };
+        item.innerHTML = `
+            <span class="text-[10px] font-bold ${selectedHeader === h ? 'text-white' : 'text-zinc-500'} uppercase flex items-center gap-1">
+                ${h}
+                ${hasTextOverride ? '<span class="text-[7px] text-orange-400 font-black bg-orange-500/10 px-1 rounded">EDITED</span>' : ''}
+                ${hasIcons ? '<span class="text-[7px] text-purple-400 font-black bg-purple-500/10 px-1 rounded">ICONS</span>' : ''}
+            </span>
+            <input type="checkbox" ${isVisible ? 'checked' : ''} class="accent-orange-500 col-vis-toggle">`;
+
+        item.querySelector('.col-vis-toggle').onclick = (e) => {
+            e.stopPropagation();
+            const newVal = e.target.checked;
+            const targetScope = scopeSelect.value;
+            const pVal = getProfileVal();
+            if (targetScope === 'card') {
+                if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
+                if (!cardOverrides[currentIndex][h]) cardOverrides[currentIndex][h] = JSON.parse(JSON.stringify(getConfigByScope(h)));
+                cardOverrides[currentIndex][h].visible = newVal;
+            } else if (targetScope === 'profile' && pVal) {
+                if (!profileSettings[pVal].fields) profileSettings[pVal].fields = {};
+                profileSettings[pVal].fields[h] = newVal;
+            } else {
+                fieldConfigs[h].visible = newVal;
+            }
+            render();
+        };
+
+        columnList.appendChild(item);
+    });
+}
+
+// ── Toolbar UI ─────────────────────────────────────────────────────────────
+function updateToolbarUI() {
+    const styleControls = document.getElementById('styleControls');
+    if (isEditMode && isStyleMode && selectedHeader) {
+        styleControls.classList.remove('hidden');
+        const conf = getConfigByScope(selectedHeader);
+        document.getElementById('fontSizeSlider').value = conf.fontSize;
+        document.getElementById('fontSizeDisplay').textContent = `${conf.fontSize}`;
+        document.getElementById('fontColorPicker').value = conf.color;
+        updateAlignButtons(conf.textAlign || 'center');
+    } else {
+        styleControls.classList.add('hidden');
     }
 
-    async function downloadCurrent() {
-        if (data.length === 0) return;
-        const originalMode = isEditMode;
-        isEditMode = false;
-        const canvas = await captureCard();
-        const link = document.createElement('a');
-        const name = Object.values(data[currentIndex])[0] || `card_${currentIndex}`;
-        link.download = `${name}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        isEditMode = originalMode;
-        render();
-    }
-
-    async function exportAllCards() {
-        if (data.length === 0) return;
-        const originalIndex = currentIndex;
-        const zip = new JSZip();
-        document.getElementById('exportOverlay').style.display = 'flex';
-        for (let i = 0; i < data.length; i++) {
-            currentIndex = i;
-            const canvas = await captureCard();
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-            const cardName = Object.values(data[i])[0] || `card_${i}`;
-            zip.file(`${i+1}_${cardName}.png`, blob);
-            document.getElementById('exportProgress').textContent = `Processing ${i+1} / ${data.length}`;
+    const hint = document.getElementById('modeHint');
+    if (hint) {
+        if (isStyleMode) {
+            hint.textContent = '✦ Style mode — drag, resize, or double-click to edit';
+            hint.style.color = '#f97316';
+        } else {
+            hint.textContent = '▶ Move mode — toggle Style for more options';
+            hint.style.color = '#60a5fa';
         }
-        const content = await zip.generateAsync({ type: 'blob' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'deck_export.zip';
-        link.click();
-        document.getElementById('exportOverlay').style.display = 'none';
-        currentIndex = originalIndex;
-        render();
     }
+    updateScopeText();
+}
+
+// ── Drag / resize ──────────────────────────────────────────────────────────
+interactionLayer.addEventListener('dblclick', (e) => {
+    if (!isEditMode || !isStyleMode) return;
+    const target = e.target.closest('.interaction-box');
+    if (!target) return;
+    const type = e.target.getAttribute('data-type');
+    if (type === 'resize') return;
+    const header = target.getAttribute('data-header');
+    selectedHeader = header;
+    dragInfo.active = false;
+    openInlineEditor(header);
+});
+
+interactionLayer.addEventListener('pointerdown', (e) => {
+    if (!isEditMode) return;
+    const target = e.target.closest('.interaction-box');
+    if (!target) {
+        selectedHeader = null;
+        closeInlineEditor(true);
+        render();
+        updateToolbarUI();
+        return;
+    }
+
+    const header = target.getAttribute('data-header');
+    const type = e.target.getAttribute('data-type') === 'resize' ? 'resize' : 'drag';
+
+    if (selectedHeader !== header) {
+        interactionLayer.querySelectorAll('.interaction-box').forEach(b => {
+            b.classList.toggle('active-field', b.getAttribute('data-header') === header);
+        });
+        const activeBox = interactionLayer.querySelector('.interaction-box.active-field');
+        if (activeBox && !activeBox.querySelector('.resize-handle')) {
+            const resizer = document.createElement('div');
+            resizer.className = 'resize-handle';
+            resizer.setAttribute('data-type', 'resize');
+            activeBox.appendChild(resizer);
+        }
+        selectedHeader = header;
+        updateToolbarUI();
+    }
+
+    if (isStyleMode && type === 'drag') return;
+
+    const currentConf = getConfigByScope(header);
+    dragInfo = { active: true, type, header, startX: e.clientX, startY: e.clientY, initialConfig: JSON.parse(JSON.stringify(currentConf)) };
+    interactionLayer.setPointerCapture(e.pointerId);
+});
+
+interactionLayer.addEventListener('pointermove', (e) => {
+    if (!dragInfo.active) return;
+    const targetScope = scopeSelect.value;
+    const pVal = getProfileVal();
+    let ts;
+
+    if (targetScope === 'card') {
+        if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
+        if (!cardOverrides[currentIndex][dragInfo.header]) cardOverrides[currentIndex][dragInfo.header] = JSON.parse(JSON.stringify(dragInfo.initialConfig));
+        ts = cardOverrides[currentIndex][dragInfo.header];
+    } else if (targetScope === 'profile' && pVal) {
+        if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
+        if (!profileStyleOverrides[pVal][dragInfo.header]) profileStyleOverrides[pVal][dragInfo.header] = JSON.parse(JSON.stringify(dragInfo.initialConfig));
+        ts = profileStyleOverrides[pVal][dragInfo.header];
+    } else {
+        ts = fieldConfigs[dragInfo.header];
+    }
+
+    const dx = e.clientX - dragInfo.startX;
+    const dy = e.clientY - dragInfo.startY;
+
+    if (dragInfo.type === 'drag') {
+        ts.top  = Math.round(dragInfo.initialConfig.top  + dy);
+        ts.left = Math.round(dragInfo.initialConfig.left + dx);
+    } else {
+        ts.width  = Math.max(10, Math.round(dragInfo.initialConfig.width  + dx));
+        ts.height = Math.max(10, Math.round(dragInfo.initialConfig.height + dy));
+    }
+
+    render();
+});
+
+interactionLayer.addEventListener('pointerup', (e) => {
+    if (dragInfo.active) { dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); }
+});
+
+// ── Style change helper ────────────────────────────────────────────────────
+function saveStyleChange(key, value) {
+    if (!selectedHeader) return;
+    const targetScope = scopeSelect.value;
+    const pVal = getProfileVal();
+    let target;
+
+    if (targetScope === 'card') {
+        if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
+        if (!cardOverrides[currentIndex][selectedHeader]) cardOverrides[currentIndex][selectedHeader] = JSON.parse(JSON.stringify(getConfigByScope(selectedHeader)));
+        target = cardOverrides[currentIndex][selectedHeader];
+    } else if (targetScope === 'profile' && pVal) {
+        if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
+        if (!profileStyleOverrides[pVal][selectedHeader]) profileStyleOverrides[pVal][selectedHeader] = JSON.parse(JSON.stringify(getConfigByScope(selectedHeader)));
+        target = profileStyleOverrides[pVal][selectedHeader];
+    } else {
+        target = fieldConfigs[selectedHeader];
+    }
+
+    target[key] = value;
+    render();
+}
+
+document.getElementById('fontSizeSlider').oninput = (e) => {
+    document.getElementById('fontSizeDisplay').textContent = e.target.value;
+    saveStyleChange('fontSize', parseInt(e.target.value));
+};
+
+document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
+
+document.getElementById('btnBold').onclick = () => {
+    const conf = getConfigByScope(selectedHeader);
+    saveStyleChange('fontWeight', conf.fontWeight === 700 ? 400 : 700);
+};
+
+document.getElementById('btnItalic').onclick = () => {
+    const conf = getConfigByScope(selectedHeader);
+    saveStyleChange('fontStyle', conf.fontStyle === 'italic' ? 'normal' : 'italic');
+};
+
+// ── Export ─────────────────────────────────────────────────────────────────
+async function captureCard() {
+    closeInlineEditor(true);
+    render(true);
+    const card = document.getElementById('cardPreview');
+    await new Promise(r => setTimeout(r, 120));
+    const canvas = await html2canvas(card, {
+        scale: 4, useCORS: true, allowTaint: true,
+        backgroundColor: null, logging: false,
+        foreignObjectRendering: false, imageTimeout: 15000,
+    });
+    render(false);
+    return canvas;
+}
+
+async function downloadCurrent() {
+    if (data.length === 0) return;
+    const originalMode = isEditMode;
+    isEditMode = false;
+    const canvas = await captureCard();
+    const link = document.createElement('a');
+    const name = Object.values(data[currentIndex])[0] || `card_${currentIndex}`;
+    link.download = `${name}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    isEditMode = originalMode;
+    render();
+}
+
+async function exportAllCards() {
+    if (data.length === 0) return;
+    const originalIndex = currentIndex;
+    const zip = new JSZip();
+    document.getElementById('exportOverlay').style.display = 'flex';
+
+    for (let i = 0; i < data.length; i++) {
+        currentIndex = i;
+        const canvas = await captureCard();
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+        const cardName = Object.values(data[i])[0] || `card_${i}`;
+        zip.file(`${i+1}_${cardName}.png`, blob);
+        document.getElementById('exportProgress').textContent = `Processing ${i+1} / ${data.length}`;
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(content);
+    link.download = 'deck_export.zip';
+    link.click();
+    document.getElementById('exportOverlay').style.display = 'none';
+    currentIndex = originalIndex;
+    render();
+}
 </script>
 </body>
 </html>
