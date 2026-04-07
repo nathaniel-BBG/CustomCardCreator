@@ -10,6 +10,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
         body { background-color: #09090b; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
 
@@ -286,6 +290,7 @@
       <span class="toc a" onclick="ipScroll('ih-art')">Art Assets</span>
       <span class="toc a" onclick="ipScroll('ih-icons')">Icon Library</span>
       <span class="toc a" onclick="ipScroll('ih-layout')">Edit Layout</span>
+      <span class="toc a" onclick="ipScroll('ih-fonts')">Font Choices</span>
       <span class="toc a" onclick="ipScroll('ih-artedit')">Edit Art</span>
       <span class="toc a" onclick="ipScroll('ih-profiles')">Profile Logic</span>
       <span class="toc a" onclick="ipScroll('ih-export')">Exporting</span>
@@ -345,10 +350,52 @@
       <h2>Edit Layout</h2>
       <ul>
         <li><strong>Move mode</strong> — drag a field to reposition it; drag the orange corner to resize.</li>
-        <li><strong>Style mode</strong> — toggle the Style switch to change font size, colour, bold, italic, and alignment.</li>
+        <li><strong>Style mode</strong> — toggle the Style switch to change font family, font size, colour, bold, italic, and alignment.</li>
         <li><strong>Inline edit</strong> — double-click a field in Style mode to edit text directly. Select text for the bold/italic/underline popup.</li>
         <li><strong>Target</strong> dropdown: <strong>Global</strong> (all cards), <strong>Profile</strong> (this type), or <strong>Card</strong> (this card only).</li>
       </ul>
+    </div>
+
+    <div class="sec" id="ih-fonts">
+      <h2>Font Choices</h2>
+      <p>In <strong>Style mode</strong>, select a field and use the <strong>Font</strong> dropdown in the toolbar to change its typeface. The table below summarises each option:</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:1px solid #3f3f46;">
+            <th style="text-align:left;padding:6px 8px 8px 0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Font Option</th>
+            <th style="text-align:left;padding:6px 8px 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Best For</th>
+            <th style="text-align:left;padding:6px 8px 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">"Vibe"</th>
+            <th style="text-align:left;padding:6px 0 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Print Reliability</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Atkinson Hyperlegible</td>
+            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Accessibility / Default</td>
+            <td style="padding:10px 8px;color:#71717a;">Functional &amp; Clear</td>
+            <td style="padding:10px 0 10px 8px;color:#71717a;">Highest</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Libre Baskerville</td>
+            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Fantasy / Traditional</td>
+            <td style="padding:10px 8px;color:#71717a;">Scholarly &amp; Epic</td>
+            <td style="padding:10px 0 10px 8px;color:#71717a;">High</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Archivo Narrow</td>
+            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Complex Rules / Wordy Cards</td>
+            <td style="padding:10px 8px;color:#71717a;">Industrial &amp; Tight</td>
+            <td style="padding:10px 0 10px 8px;color:#71717a;">Medium-High</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Inter Tight</td>
+            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Modern / Sci-Fi</td>
+            <td style="padding:10px 8px;color:#71717a;">Sleek &amp; Techy</td>
+            <td style="padding:10px 0 10px 8px;color:#71717a;">High</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note">Font choice respects the <strong>Target</strong> scope — you can set a different font per field, per profile, or per individual card.</div>
     </div>
 
     <div class="sec" id="ih-artedit">
@@ -471,6 +518,15 @@
             </div>
             <div class="w-6 h-6 rounded border border-zinc-700 relative shrink-0 overflow-hidden" title="Font color">
                 <input type="color" id="fontColorPicker" value="#000000" class="absolute -inset-2 w-10 h-10 bg-transparent border-none cursor-pointer">
+            </div>
+            <div class="flex flex-col shrink-0 border-l border-zinc-800 pl-2">
+                <span class="text-[6px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Font</span>
+                <select id="fontFamilySelect" class="bg-zinc-950 border border-zinc-700 text-[8px] font-bold text-zinc-200 rounded px-1 py-0.5 outline-none focus:border-orange-500 transition-colors w-36">
+                    <option value="'Atkinson Hyperlegible', sans-serif">Atkinson Hyperlegible</option>
+                    <option value="'Libre Baskerville', serif">Libre Baskerville</option>
+                    <option value="'Archivo Narrow', sans-serif">Archivo Narrow</option>
+                    <option value="'Inter Tight', sans-serif">Inter Tight</option>
+                </select>
             </div>
             <div class="flex gap-0.5 shrink-0 border-l border-zinc-800 pl-2">
                 <button id="btnAlignLeft"   class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
@@ -1085,7 +1141,7 @@ function openInlineEditor(header) {
     const ed = document.createElement('div');
     ed.contentEditable = 'true'; ed.spellcheck = false; ed.dataset.header = header;
     ed.className = `inline-editor align-${alignment}`;
-    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};`;
+    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};`;
     ed.innerHTML = getRichHTML(currentIndex, header);
     ed.addEventListener('input', () => { commitEditorToStore(); positionMiniBar(); });
     ed.addEventListener('keydown', handleEditorKeydown);
@@ -1220,7 +1276,7 @@ function render(forExport = false) {
         div.className = `dynamic-field align-${alignment}`;
         div.dataset.field = h;
         if (forExport) div.classList.add('export-nudge');
-        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};`;
+        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};`;
         const span = document.createElement('span');
         span.className = 'field-rich-content'; span.innerHTML = richHTML;
         div.appendChild(span); fieldsContainer.appendChild(div);
@@ -1347,6 +1403,7 @@ function updateToolbarUI() {
         document.getElementById('fontSizeDisplay').textContent = `${conf.fontSize}`;
         document.getElementById('fontColorPicker').value = conf.color;
         updateAlignButtons(conf.textAlign || 'center');
+        document.getElementById('fontFamilySelect').value = conf.fontFamily || "'Atkinson Hyperlegible', sans-serif";
     } else { sc.classList.add('hidden'); }
     const hint = document.getElementById('modeHint');
     if (hint) {
@@ -1443,6 +1500,7 @@ document.getElementById('fontSizeSlider').oninput = (e) => { document.getElement
 document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
 document.getElementById('btnBold').onclick   = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontWeight', c.fontWeight === 700 ? 400 : 700); };
 document.getElementById('btnItalic').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontStyle', c.fontStyle === 'italic' ? 'normal' : 'italic'); };
+document.getElementById('fontFamilySelect').onchange = (e) => saveStyleChange('fontFamily', e.target.value);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EVENT WIRING
