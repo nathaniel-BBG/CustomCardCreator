@@ -1,512 +1,505 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Card Architect - Rich Text Edition</title>
-
+    <title>Card Architect v8</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
     <style>
-
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         body { background-color: #09090b; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
 
         .card-container {
-
             width: 375px; height: 525px; position: relative; background: #fff;
-
             border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-
             overflow: hidden; flex-shrink: 0; user-select: none;
-
             transform: translateZ(0); -webkit-font-smoothing: antialiased;
-
         }
 
         .template-layer { position: absolute; inset: 0; background-size: 100% 100%; z-index: 5; pointer-events: none; }
 
         .art-layer {
-
-            position: absolute; top: 45px; left: 25px; width: 325px; height: 240px;
-
-            background-size: cover; background-position: center; background-color: #f1f5f9;
-
-            z-index: 1; border-radius: 4px;
-
+            position: absolute; top: 0; left: 0; width: 375px; height: 525px;
+            background-size: cover; background-position: center; background-color: transparent;
+            background-repeat: no-repeat;
+            z-index: 1; border-radius: 16px;
         }
+
+        /* Art pan cursor only in edit mode */
+        .art-layer.art-edit-active { cursor: grab; pointer-events: auto; }
+        .art-layer.art-edit-active:active { cursor: grabbing; }
 
         .dynamic-field {
-
             position: absolute; z-index: 20; display: flex; align-items: center;
-
             line-height: 1.2; word-break: break-word; pointer-events: none;
-
             box-sizing: border-box; padding: 2px 4px; white-space: pre-wrap;
-
         }
-
         .dynamic-field.align-left   { justify-content: flex-start; text-align: left; }
-
         .dynamic-field.align-center { justify-content: center;     text-align: center; }
-
         .dynamic-field.align-right  { justify-content: flex-end;   text-align: right; }
 
-        .field-rich-content {
-
-            display: inline; line-height: inherit; word-break: break-word; white-space: pre-wrap;
-
-        }
-
-        /* Rich text spans from spreadsheet or in-editor */
-
+        .field-rich-content { display: inline; line-height: inherit; word-break: break-word; white-space: pre-wrap; }
         .field-rich-content b, .field-rich-content strong { font-weight: 900; }
-
         .field-rich-content i, .field-rich-content em { font-style: italic; }
-
         .field-rich-content u { text-decoration: underline; }
 
         .inline-icon {
-
             display: inline-block; vertical-align: middle; object-fit: contain;
-
             position: relative; top: -0.05em; margin: 0 0.05em; flex-shrink: 0;
-
         }
-
-        /* ── Rich Inline Editor ── */
 
         .inline-editor {
-
             position: absolute; z-index: 200; box-sizing: border-box;
-
             outline: 2px solid #f97316; border-radius: 3px;
-
             background: rgba(255,255,255,0.96); padding: 2px 4px;
-
             line-height: 1.2; word-break: break-word; white-space: pre-wrap;
-
             overflow: hidden; cursor: text; font-family: 'Inter', sans-serif;
-
         }
-
         .inline-editor.align-left   { text-align: left; }
-
         .inline-editor.align-center { text-align: center; }
-
         .inline-editor.align-right  { text-align: right; }
-
-        /* Inherit bold/italic/underline from markup */
-
         .inline-editor b, .inline-editor strong { font-weight: 900; }
-
         .inline-editor i, .inline-editor em { font-style: italic; }
-
         .inline-editor u { text-decoration: underline; }
 
-        /* Mini floating format bar that appears above editor */
-
         #miniFormatBar {
-
             position: absolute; z-index: 300; display: none;
-
             background: #18181b; border: 1px solid #3f3f46; border-radius: 8px;
-
             padding: 4px 6px; gap: 3px; align-items: center;
-
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-
-            pointer-events: auto;
-
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6); pointer-events: auto;
         }
-
         #miniFormatBar.visible { display: flex; }
 
         .mini-btn {
-
             width: 26px; height: 26px; border-radius: 5px;
-
             background: #27272a; border: 1px solid #3f3f46;
-
             color: #a1a1aa; font-size: 11px; font-weight: 900;
-
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-
-            transition: background 0.15s, color 0.15s;
-
-            font-family: 'Inter', sans-serif;
-
+            transition: background 0.15s, color 0.15s; font-family: 'Inter', sans-serif;
         }
-
         .mini-btn:hover { background: #3f3f46; color: white; }
-
         .mini-btn.active { background: #ea580c; border-color: #f97316; color: white; }
-
         .mini-btn-sep { width: 1px; height: 16px; background: #3f3f46; margin: 0 2px; }
 
         .interaction-layer { position: absolute; inset: 0; z-index: 100; pointer-events: none; }
-
         .interaction-box {
-
             position: absolute; cursor: move; border: 1px dashed rgba(249,115,22,0.3);
-
             pointer-events: auto; transition: border-color 0.2s, background 0.2s;
-
         }
-
         .interaction-box.active-field {
-
             border: 2px solid #f97316 !important; background: rgba(249,115,22,0.08); z-index: 101;
-
         }
-
         .resize-handle {
-
             position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px;
-
             background: #f97316; border-radius: 2px; cursor: nwse-resize; z-index: 102;
-
         }
 
         .sidebar { width: 400px; background: #121214; border-left: 1px solid #27272a; height: 100vh; }
-
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
 
         .profile-card {
-
             border: 1px solid #27272a; border-radius: 12px; padding: 16px;
-
             margin-bottom: 16px; transition: all 0.2s; position: relative;
-
             background: rgba(24,24,27,0.4);
-
         }
-
         .profile-card.active-profile { border-color: rgba(249,115,22,0.5); background: rgba(249,115,22,0.05); }
 
         .toolbar-btn {
-
             display: flex; align-items: center; justify-content: center;
-
             border-radius: 4px; background: #27272a; border: 1px solid #3f3f46;
-
             font-size: 10px; font-weight: 700; transition: background 0.2s; cursor: pointer;
-
         }
-
         .toolbar-btn:hover { background: #3f3f46; }
-
         .toolbar-btn.active { background: #ea580c; border-color: #f97316; color: white; }
 
         .align-btn {
-
             display: flex; align-items: center; justify-content: center; border-radius: 4px;
-
             background: #27272a; border: 1px solid #3f3f46; cursor: pointer;
-
             transition: background 0.2s; width: 24px; height: 24px;
-
         }
-
         .align-btn:hover { background: #3f3f46; }
-
         .align-btn.active { background: #ea580c; border-color: #f97316; }
 
         .switch { position: relative; display: inline-block; width: 28px; height: 14px; }
-
         .switch input { opacity: 0; width: 0; height: 0; }
-
         .slider {
-
             position: absolute; cursor: pointer; inset: 0;
-
             background-color: #3f3f46; transition: .4s; border-radius: 20px;
-
         }
-
         .slider:before {
-
             position: absolute; content: ""; height: 10px; width: 10px;
-
             left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%;
-
         }
-
         input:checked + .slider { background-color: #f97316; }
-
         input:checked + .slider:before { transform: translateX(14px); }
 
         #exportOverlay {
-
             position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000;
-
             display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px);
-
         }
-
         .export-nudge { transform: translateY(-15px); }
 
-        /* Icon library */
-
-        .icon-entry {
-
-            display: flex; align-items: center; gap: 10px;
-
+        /* ── Art Asset Library ── */
+        .art-asset-entry {
+            display: flex; align-items: center; gap: 8px;
             background: rgba(24,24,27,0.6); border: 1px solid #27272a;
-
-            border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; transition: border-color 0.2s;
-
+            border-radius: 10px; padding: 6px 10px; margin-bottom: 6px;
+            transition: border-color 0.2s; cursor: pointer;
         }
-
-        .icon-entry:hover { border-color: #3f3f46; }
-
-        .icon-thumb { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; background: #1c1c1f; flex-shrink: 0; }
-
-        .icon-token-input {
-
+        .art-asset-entry:hover { border-color: #3f3f46; }
+        .art-asset-entry.art-active { border-color: #f97316; background: rgba(249,115,22,0.06); }
+        .art-thumb {
+            width: 36px; height: 50px; object-fit: cover; border-radius: 4px;
+            background: #1c1c1f; flex-shrink: 0; border: 1px solid #27272a;
+        }
+        .art-name-input {
             flex: 1; background: #0c0c0e; border: 1px solid #27272a; border-radius: 6px;
-
-            color: #f97316; font-size: 10px; font-weight: 700; font-family: 'Inter', sans-serif;
-
+            color: #e4e4e7; font-size: 10px; font-weight: 700; font-family: 'Inter', sans-serif;
             padding: 4px 8px; outline: none; min-width: 0;
-
         }
-
-        .icon-token-input:focus { border-color: #f97316; }
-
-        .icon-scale-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
-
-        .icon-scale-wrap label { font-size: 7px; font-weight: 900; color: #52525b; text-transform: uppercase; letter-spacing: 0.05em; }
-
-        .icon-scale-corner {
-
-            width: 20px; height: 20px; border-right: 3px solid #52525b; border-bottom: 3px solid #52525b;
-
-            border-radius: 0 0 3px 0; cursor: nwse-resize; flex-shrink: 0; transition: border-color 0.15s;
-
-        }
-
-        .icon-scale-corner:hover { border-color: #f97316; }
-
-        .icon-delete-btn { background: none; border: none; color: #52525b; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px; flex-shrink: 0; transition: color 0.15s; }
-
-        .icon-delete-btn:hover { color: #ef4444; }
-
-        .icon-drop-zone {
-
+        .art-name-input:focus { border-color: #f97316; }
+        .art-delete-btn { background: none; border: none; color: #52525b; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px; flex-shrink: 0; transition: color 0.15s; }
+        .art-delete-btn:hover { color: #ef4444; }
+        .art-drop-zone {
             border: 2px dashed #27272a; border-radius: 10px; padding: 14px;
-
             text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
-
             background: rgba(24,24,27,0.3);
-
         }
+        .art-drop-zone:hover { border-color: #f97316; background: rgba(249,115,22,0.03); }
 
+        /* ── Icon Library ── */
+        .icon-entry {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(24,24,27,0.6); border: 1px solid #27272a;
+            border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; transition: border-color 0.2s;
+        }
+        .icon-entry:hover { border-color: #3f3f46; }
+        .icon-thumb { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; background: #1c1c1f; flex-shrink: 0; }
+        .icon-token-input {
+            flex: 1; background: #0c0c0e; border: 1px solid #27272a; border-radius: 6px;
+            color: #f97316; font-size: 10px; font-weight: 700; font-family: 'Inter', sans-serif;
+            padding: 4px 8px; outline: none; min-width: 0;
+        }
+        .icon-token-input:focus { border-color: #f97316; }
+        .icon-scale-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+        .icon-scale-wrap label { font-size: 7px; font-weight: 900; color: #52525b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .icon-scale-corner {
+            width: 20px; height: 20px; border-right: 3px solid #52525b; border-bottom: 3px solid #52525b;
+            border-radius: 0 0 3px 0; cursor: nwse-resize; flex-shrink: 0; transition: border-color 0.15s;
+        }
+        .icon-scale-corner:hover { border-color: #f97316; }
+        .icon-delete-btn { background: none; border: none; color: #52525b; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px; flex-shrink: 0; transition: color 0.15s; }
+        .icon-delete-btn:hover { color: #ef4444; }
+        .icon-drop-zone {
+            border: 2px dashed #27272a; border-radius: 10px; padding: 14px;
+            text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+            background: rgba(24,24,27,0.3);
+        }
         .icon-drop-zone:hover { border-color: #f97316; background: rgba(249,115,22,0.03); }
 
-        /* Rich text hint badge */
+        /* ── Template tile delete button ── */
+        .template-tile { position: relative; cursor: pointer; border-radius: 6px; border: 2px solid #27272a; overflow: visible; }
+        .template-tile.selected { border-color: #f97316; }
+        .template-tile-del {
+            position: absolute; top: -6px; right: -6px; width: 16px; height: 16px;
+            background: #ef4444; border-radius: 50%; border: none; cursor: pointer;
+            color: white; font-size: 10px; font-weight: 900; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.15s; z-index: 10;
+        }
+        .template-tile:hover .template-tile-del { opacity: 1; }
 
         .badge-rich { font-size: 7px; font-weight: 900; background: rgba(168,85,247,0.15); color: #a855f7; padding: 1px 5px; border-radius: 4px; }
-
         .badge-edited { font-size: 7px; font-weight: 900; background: rgba(249,115,22,0.12); color: #f97316; padding: 1px 5px; border-radius: 4px; }
 
-        .badge-icons { font-size: 7px; font-weight: 900; background: rgba(59,130,246,0.12); color: #60a5fa; padding: 1px 5px; border-radius: 4px; }
-
+        /* shared style for both header toggle buttons */
+        .header-toggle-btn {
+            font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.07em;
+            padding: 5px 12px; border-radius: 7px; border: 1px solid #3f3f46;
+            background: #27272a; color: #a1a1aa; cursor: pointer; transition: all 0.15s;
+        }
+        .header-toggle-btn.active { background: #ea580c; border-color: #f97316; color: white; }
+        .header-toggle-btn:hover:not(.active) { background: #3f3f46; color: white; }
     </style>
-
 </head>
-
 <body class="flex h-screen">
 
-<!-- Mini floating format bar (lives inside cardPreview) -->
-
+<!-- Mini floating format bar -->
 <div id="miniFormatBar">
-
     <button class="mini-btn" id="miniBold"      title="Bold (Ctrl+B)"><b>B</b></button>
-
     <button class="mini-btn" id="miniItalic"    title="Italic (Ctrl+I)"><i>I</i></button>
-
     <button class="mini-btn" id="miniUnderline" title="Underline (Ctrl+U)"><u>U</u></button>
-
     <div class="mini-btn-sep"></div>
-
     <button class="mini-btn" id="miniClear"     title="Clear formatting" style="font-size:9px;">✕ FMT</button>
-
 </div>
 
 <div id="exportOverlay">
-
     <div class="text-center">
-
         <div class="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-
         <h2 class="text-xl font-black text-white uppercase tracking-widest mb-2">Generating Assets</h2>
-
         <p id="exportProgress" class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Processing 0 / 0</p>
+    </div>
+</div>
 
+<!-- INSTRUCTIONS PANEL -->
+<div id="instructionsPanel" style="display:none;position:fixed;inset:0;z-index:900;background:#09090b;overflow-y:auto;font-family:'Inter',sans-serif;">
+<style>
+#iP{--or:#f97316;--b:#27272a;--b2:#3f3f46;--m:#71717a;--w:#fafafa;}
+#iP .bar{position:sticky;top:0;z-index:10;background:rgba(9,9,11,0.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--b);padding:11px 40px;display:flex;align-items:center;justify-content:space-between;}
+#iP .bar-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:var(--or);}
+#iP .back{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#a1a1aa;background:#27272a;border:1px solid var(--b2);border-radius:7px;padding:6px 14px;cursor:pointer;transition:all .15s;}
+#iP .back:hover{background:var(--b2);color:var(--w);}
+#iP .body{max-width:600px;margin:0 auto;padding:36px 40px 80px;}
+#iP .toc{margin-bottom:36px;}
+#iP .toc-label{font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--m);margin-bottom:8px;display:block;}
+#iP .toc span.a{font-size:13px;color:#71717a;display:block;cursor:pointer;line-height:1.2;margin-bottom:6px;transition:color .15s;}
+#iP .toc span.a:hover{color:var(--or);}
+#iP .sec{margin-bottom:40px;scroll-margin-top:56px;}
+#iP .sec h2{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:var(--or);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--b);}
+#iP .sec ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;}
+#iP .sec li{font-size:13px;color:var(--m);line-height:1.6;padding-left:14px;position:relative;}
+#iP .sec li::before{content:'–';position:absolute;left:0;color:var(--b2);}
+#iP .sec li strong{color:#d4d4d8;font-weight:700;}
+#iP .sec p{font-size:13px;color:var(--m);line-height:1.65;margin-bottom:8px;}
+#iP .sec p strong{color:#d4d4d8;font-weight:700;}
+#iP .note{font-size:11px;color:var(--or);background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:6px;padding:9px 13px;margin-top:10px;line-height:1.6;}
+#iP code{font-family:monospace;font-size:11px;background:#18181b;border:1px solid var(--b);border-radius:3px;padding:1px 5px;color:var(--or);}
+</style>
+<div id="iP">
+  <div class="bar">
+    <span class="bar-title">&#9654; Deck Architect — Help</span>
+    <button class="back" onclick="document.getElementById('instructionsPanel').style.display='none';document.getElementById('instructionsToggleBtn').classList.remove('active');">← Back</button>
+  </div>
+  <div class="body">
+
+    <div class="toc">
+      <div class="toc-label">Jump to</div>
+      <span class="toc a" onclick="ipScroll('ih-data')">Loading Your Data</span>
+      <span class="toc a" onclick="ipScroll('ih-frames')">Frame Assets</span>
+      <span class="toc a" onclick="ipScroll('ih-art')">Art Assets</span>
+      <span class="toc a" onclick="ipScroll('ih-icons')">Icon Library</span>
+      <span class="toc a" onclick="ipScroll('ih-layout')">Edit Layout</span>
+      <span class="toc a" onclick="ipScroll('ih-artedit')">Edit Art</span>
+      <span class="toc a" onclick="ipScroll('ih-profiles')">Profile Logic</span>
+      <span class="toc a" onclick="ipScroll('ih-export')">Exporting</span>
+      <span class="toc a" onclick="ipScroll('ih-save')">Save &amp; Load</span>
     </div>
 
+    <div class="sec" id="ih-data">
+      <h2>Loading Your Data</h2>
+      <ul>
+        <li>Upload a <strong>CSV or Excel (.xlsx)</strong> file in the <strong>Database</strong> section. Each row = one card; column headers = field names.</li>
+        <li>Use <strong>PREV / NEXT</strong> or the dropdown at the bottom of the sidebar to browse cards.</li>
+        <li>Add a column named <code>art</code> or <code>image</code> to auto-link artwork by filename.</li>
+        <li>Excel bold/italic/underline is preserved automatically.</li>
+      </ul>
+    </div>
+
+    <div class="sec" id="ih-frames">
+      <h2>Frame Assets</h2>
+      <ul>
+        <li>Upload transparent PNG overlays (borders, card chrome) via the <strong>Frame Assets</strong> drop zone.</li>
+        <li>Click a thumbnail to apply it as the active frame. Hover + click <strong>✕</strong> to remove.</li>
+      </ul>
+    </div>
+
+    <div class="sec" id="ih-art">
+      <h2>Art Assets</h2>
+      <ul>
+        <li>Upload card illustrations (PNG, JPG, WebP) via the <strong>Art Assets</strong> drop zone in the sidebar.</li>
+        <li>Once uploaded, click <strong>Browse &amp; Assign Art</strong> to open the art library and click any image to assign it to the current card. Click again to unassign.</li>
+        <li>The currently assigned art shows as a small preview in the sidebar so you always know what's set for the current card.</li>
+        <li>Or use an <code>art</code> column in your spreadsheet — Deck Architect matches by filename or the name set in the library.</li>
+      </ul>
+    </div>
+
+    <div class="sec" id="ih-icons">
+      <h2>Icon Library</h2>
+      <ul>
+        <li>Upload an icon, give it a token name (e.g. <code>fire</code>), then type <code>{fire}</code> in any spreadsheet cell to embed it inline.</li>
+        <li>Drag the <strong>⊿</strong> handle on an icon entry to adjust its size.</li>
+      </ul>
+    </div>
+
+    <div class="sec" id="ih-layout">
+      <h2>Edit Layout</h2>
+      <ul>
+        <li><strong>Move mode</strong> — drag a field to reposition it; drag the orange corner to resize.</li>
+        <li><strong>Style mode</strong> — toggle the Style switch to change font size, colour, bold, italic, and alignment.</li>
+        <li><strong>Inline edit</strong> — double-click a field in Style mode to edit text directly. Select text for the bold/italic/underline popup.</li>
+        <li><strong>Target</strong> dropdown: <strong>Global</strong> (all cards), <strong>Profile</strong> (this type), or <strong>Card</strong> (this card only).</li>
+      </ul>
+    </div>
+
+    <div class="sec" id="ih-artedit">
+      <h2>Edit Art</h2>
+      <ul>
+        <li>Use the <strong>Art Scale</strong> slider to zoom the artwork (50–300%).</li>
+        <li>Click and drag on the card to pan the image into position.</li>
+        <li>Click <strong>↺ Reset</strong> to return to 100% centred.</li>
+      </ul>
+      <div class="note">Scale and position are saved per card and baked into the exported PNG.</div>
+    </div>
+
+    <div class="sec" id="ih-profiles">
+      <h2>Profile Logic</h2>
+      <ul>
+        <li>Pick a column (e.g. <code>Type</code>) under <strong>Profile Logic</strong> — a profile is created for each unique value.</li>
+        <li>Click a profile to activate it, then use Edit Layout with <strong>Target: Profile</strong> to style just that card type.</li>
+        <li>You can assign a different frame to each profile.</li>
+      </ul>
+    </div>
+
+    <div class="sec" id="ih-export">
+      <h2>Exporting</h2>
+      <ul>
+        <li><strong>Export Current</strong> — downloads a PNG of the current card.</li>
+        <li><strong>Export Full Deck</strong> — renders all cards and downloads them as a ZIP.</li>
+      </ul>
+      <div class="note">Don't close the tab while the export overlay is running.</div>
+    </div>
+
+    <div class="sec" id="ih-save">
+      <h2>Save &amp; Load</h2>
+      <ul>
+        <li><strong>Save Project</strong> — downloads a <code>.deckproject.zip</code> with all your data, images, and settings.</li>
+        <li><strong>Load Project</strong> — restores everything from a saved file.</li>
+      </ul>
+      <div class="note">No auto-save — remember to save regularly.</div>
+    </div>
+
+  </div>
 </div>
+</div><!-- /instructionsPanel -->
+
+<!-- ART LIBRARY PANEL -->
+<div id="artLibraryPanel" style="display:none;position:fixed;inset:0;z-index:800;background:#09090b;overflow-y:auto;font-family:'Inter',sans-serif;">
+<style>
+#aLP .alp-bar{position:sticky;top:0;z-index:10;background:rgba(9,9,11,0.97);backdrop-filter:blur(8px);border-bottom:1px solid #27272a;padding:11px 40px;display:flex;align-items:center;justify-content:space-between;}
+#aLP .alp-title{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#f97316;}
+#aLP .alp-back{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#a1a1aa;background:#27272a;border:1px solid #3f3f46;border-radius:7px;padding:6px 14px;cursor:pointer;transition:all .15s;}
+#aLP .alp-back:hover{background:#3f3f46;color:#fafafa;}
+#aLP .alp-body{max-width:600px;margin:0 auto;padding:32px 40px 80px;}
+#aLP .alp-hint{font-size:11px;color:#52525b;margin-bottom:20px;}
+#aLP #artLibraryList .art-asset-entry{cursor:pointer;}
+</style>
+<div id="aLP">
+  <div class="alp-bar">
+    <span class="alp-title">&#9654; Art Library</span>
+    <button class="alp-back" id="closeArtPanelBtn">← Back</button>
+  </div>
+  <div class="alp-body">
+    <p class="alp-hint">Click an image to assign it to the current card. Click again to unassign.</p>
+    <div id="artLibraryList"></div>
+  </div>
+</div>
+</div><!-- /artLibraryPanel -->
 
 <main id="workspace" class="flex-1 flex flex-col items-center py-10 bg-[#0c0c0e] overflow-y-auto custom-scrollbar">
 
     <!-- Header -->
-
     <div class="w-full max-w-4xl px-8 mb-8 flex items-start justify-between">
-
         <div class="flex flex-col">
-
             <h1 class="text-3xl font-black text-white uppercase tracking-tighter mb-1">Deck Architect</h1>
-
             <div class="flex items-center gap-4 mt-1">
-
                 <div class="flex flex-col">
-
                     <span id="activeProfileDisplay" class="text-[11px] font-black text-orange-500 uppercase tracking-widest">Global Context</span>
-
                     <div class="text-[11px] font-black text-zinc-500 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
-
                         Scope: <span class="text-white" id="currentScopeText">Global</span>
-                        <button id="clearScopeBtn" class="hidden text-[8px] font-black text-zinc-500 hover:text-red-400 uppercase tracking-widest border border-zinc-700 hover:border-red-500 rounded px-1 py-0.5 transition-colors leading-none" title="Reset this card back to Global scope">✕ reset</button>
-
+                        <button id="clearScopeBtn" class="hidden text-[8px] font-black text-zinc-500 hover:text-red-400 uppercase tracking-widest border border-zinc-700 hover:border-red-500 rounded px-1 py-0.5 transition-colors leading-none">✕ reset</button>
                     </div>
-
                 </div>
-
                 <span class="w-1.5 h-1.5 rounded-full bg-zinc-800 self-center"></span>
-
-                <button id="toggleEditBtn" class="text-[11px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 transition-colors self-center">Edit Layout</button>
-
+                <button id="toggleEditBtn" class="header-toggle-btn self-center">Edit Layout</button>
+                <button id="artEditToggleBtn" class="header-toggle-btn self-center">Edit Art</button>
+                <button id="instructionsToggleBtn" class="header-toggle-btn self-center" style="display:flex;align-items:center;gap:5px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Instructions
+                </button>
             </div>
-
         </div>
-
     </div>
 
-    <!-- Floating Toolbar -->
-
+    <!-- Floating Toolbar (text layout) -->
     <div id="formatToolbar" class="mb-8 px-3 py-2 bg-zinc-900/90 rounded-xl border border-zinc-800 flex items-center gap-3 hidden shadow-2xl backdrop-blur-md flex-wrap">
-
         <div class="flex flex-col pr-3 border-r border-zinc-800 shrink-0 gap-1">
-
             <div class="flex items-center gap-2">
-
                 <div class="flex flex-col">
-
                     <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Style</span>
-
                     <div id="coordsBox" class="font-mono text-[8px] text-zinc-400 truncate max-w-[80px]">No selection</div>
-
                 </div>
-
                 <label class="switch"><input type="checkbox" id="modeToggle"><span class="slider"></span></label>
-
             </div>
-
             <div id="modeHint" class="text-[7px] font-black uppercase tracking-widest text-blue-400">&#9654; Move mode — toggle Style for more</div>
-
         </div>
-
         <div class="flex flex-col shrink-0">
-
             <span class="text-[7px] font-black text-zinc-500 uppercase leading-none mb-1 tracking-widest">Target</span>
-
             <select id="savingScopeSelect" class="bg-zinc-950 border border-zinc-800 text-[9px] font-black text-orange-400 rounded-md px-1.5 py-0.5 outline-none focus:border-orange-500 transition-colors">
-
                 <option value="global">GLOBAL</option>
-
                 <option value="profile">PROFILE</option>
-
                 <option value="card">CARD</option>
-
             </select>
-
         </div>
-
         <div id="styleControls" class="flex items-center gap-3 hidden border-l border-zinc-800 pl-3 flex-wrap">
-
-            <!-- Whole-field bold/italic still work here for convenience -->
-
             <div class="flex gap-0.5 shrink-0">
-
                 <button id="btnBold"   class="toolbar-btn w-6 h-6">B</button>
-
                 <button id="btnItalic" class="toolbar-btn w-6 h-6 italic font-serif">I</button>
-
             </div>
-
             <div class="flex items-center gap-1.5 shrink-0">
-
                 <input type="range" id="fontSizeSlider" min="8" max="100" value="16" class="w-14 accent-orange-500">
-
                 <span id="fontSizeDisplay" class="text-[9px] font-mono font-bold text-zinc-300 w-6 text-center">16</span>
-
             </div>
-
             <div class="w-6 h-6 rounded border border-zinc-700 relative shrink-0 overflow-hidden" title="Font color">
-
                 <input type="color" id="fontColorPicker" value="#000000" class="absolute -inset-2 w-10 h-10 bg-transparent border-none cursor-pointer">
-
             </div>
-
             <div class="flex gap-0.5 shrink-0 border-l border-zinc-800 pl-2">
-
                 <button id="btnAlignLeft"   class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
-
                 <button id="btnAlignCenter" class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="2.5" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
-
                 <button id="btnAlignRight"  class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="4" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
-
             </div>
-
         </div>
+    </div>
 
+    <!-- Art Edit Panel (above card, same style as format toolbar) -->
+    <div id="artEditPanel" class="mb-8 px-3 py-2 bg-zinc-900/90 rounded-xl border border-zinc-800 hidden items-center gap-4 shadow-2xl backdrop-blur-md flex-wrap">
+        <div class="flex flex-col gap-1 pr-3 border-r border-zinc-800 shrink-0">
+            <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Art Scale</span>
+            <div class="flex items-center gap-2">
+                <input type="range" id="artScaleSlider" min="50" max="300" value="100" class="w-28 accent-orange-500">
+                <span id="artScaleDisplay" class="text-[9px] font-mono font-bold text-orange-400 w-8">100%</span>
+            </div>
+        </div>
+        <div class="flex flex-col gap-1 shrink-0">
+            <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Pan</span>
+            <span class="text-[8px] text-zinc-500 font-bold">Drag artwork on card to reposition</span>
+        </div>
+        <div class="border-l border-zinc-800 pl-3 shrink-0">
+            <button id="artResetBtn" class="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all">↺ Reset</button>
+        </div>
     </div>
 
     <!-- Rich text hint -->
-
     <div class="mb-3 text-center text-[9px] font-bold text-zinc-600 uppercase tracking-widest hidden" id="richHint">
-
         Double-click a field → select text → use the popup bar to Bold / Italic / Underline
-
     </div>
 
     <!-- Card Preview -->
-
     <div id="cardPreview" class="card-container" style="position:relative;">
-
         <div id="artLayer" class="art-layer"></div>
-
         <div id="templateLayer" class="template-layer"></div>
-
         <div id="fieldsContainer" class="absolute inset-0"></div>
-
         <div id="interactionLayer" class="interaction-layer"></div>
-
     </div>
 
-    <div class="flex items-center gap-4 mt-10">
-
+    <div class="flex items-center gap-4 mt-6">
         <button id="downloadCurrentBtn" class="bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest border border-zinc-700 transition-all">Export Current</button>
-
         <button id="exportAllBtn" class="bg-orange-600 hover:bg-orange-500 text-white px-10 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all">Export Full Deck</button>
-
     </div>
 
     <!-- Save / Load Project -->
@@ -526,2036 +519,1259 @@
 </main>
 
 <aside class="sidebar flex flex-col">
-
     <div class="p-6 space-y-10 flex-1 overflow-y-auto custom-scrollbar">
 
+        <!-- Database -->
         <section>
-
             <div class="flex items-center justify-between mb-4">
-
                 <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Database</h3>
-
                 <div id="dataScopeLabel" class="text-[8px] font-black bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded uppercase tracking-tighter">No File</div>
-
             </div>
-
-            <div id="dropZoneData" class="border-2 border-dashed border-zinc-800 p-6 rounded-xl text-center cursor-pointer hover:border-orange-500 transition-colors bg-zinc-900/30">
-
+            <div id="dropZoneData" class="border-2 border-dashed border-zinc-800 p-5 rounded-xl text-center cursor-pointer hover:border-orange-500 transition-colors bg-zinc-900/30">
                 <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="hidden">
-
                 <p class="text-xs text-zinc-400 font-bold uppercase tracking-tighter" id="fileNameLabel">Upload CSV/Excel</p>
-
-                <p class="text-[8px] text-zinc-600 mt-1">Excel rich text (bold/italic/underline) is preserved automatically</p>
-
+                <p class="text-[8px] text-zinc-600 mt-1">Excel rich text (bold/italic/underline) preserved</p>
             </div>
-
+            <!-- Loaded file info + clear -->
+            <div id="dataLoadedRow" class="hidden mt-2 flex items-center justify-between bg-zinc-900/60 border border-zinc-800 rounded-lg px-3 py-2">
+                <span id="dataLoadedName" class="text-[9px] font-bold text-zinc-400 truncate max-w-[240px]"></span>
+                <button id="clearDataBtn" class="text-[8px] font-black text-red-400 hover:text-red-300 uppercase tracking-widest ml-2 shrink-0">✕ Clear</button>
+            </div>
         </section>
 
+        <!-- Frame Assets -->
         <section>
-
             <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Frame Assets</h3>
-
             <div id="dropZoneTemplates" class="border-2 border-dashed border-zinc-800 p-4 rounded-xl text-center cursor-pointer hover:border-orange-500 mb-4 bg-zinc-900/30">
-
                 <input type="file" id="templateFiles" accept="image/*" multiple class="hidden">
-
                 <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Add Templates</p>
-
             </div>
-
             <div id="templateLibrary" class="grid grid-cols-4 gap-2"></div>
+        </section>
 
+        <!-- Art Assets -->
+        <section>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Art Assets</h3>
+                <span id="artCountBadge" class="text-[8px] font-black bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded uppercase tracking-tighter">0 Images</span>
+            </div>
+            <div id="artDropZone" class="art-drop-zone mb-3">
+                <input type="file" id="artFileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" multiple class="hidden">
+                <svg class="w-5 h-5 mx-auto mb-2 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Upload Card Art</p>
+                <p class="text-[8px] text-zinc-600 mt-1">PNG / JPG / WebP — drag or click</p>
+            </div>
+            <!-- Current card art preview -->
+            <div id="currentArtPreview" class="hidden mb-3 flex items-center gap-3 bg-zinc-900/60 border border-zinc-800 rounded-lg px-3 py-2">
+                <img id="currentArtThumb" src="" alt="" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid #27272a;">
+                <div class="flex flex-col flex-1 min-w-0">
+                    <span class="text-[9px] font-black text-orange-400 uppercase tracking-widest">✓ Assigned</span>
+                    <span id="currentArtName" class="text-[9px] font-bold text-zinc-400 truncate mt-0.5"></span>
+                </div>
+            </div>
+            <button id="browseArtBtn" class="w-full text-[10px] font-black uppercase tracking-widest py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-all hidden">
+                Browse &amp; Assign Art
+            </button>
         </section>
 
         <!-- Icon Library -->
-
         <section>
-
             <div class="flex items-center justify-between mb-3">
-
                 <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Icon Library</h3>
-
                 <span class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Use {token} in cells</span>
-
             </div>
-
             <div id="iconDropZone" class="icon-drop-zone mb-4">
-
                 <input type="file" id="iconFileInput" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" multiple class="hidden">
-
                 <svg class="w-5 h-5 mx-auto mb-2 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-
                 </svg>
-
                 <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Upload Icons (PNG / JPG)</p>
-
             </div>
-
             <div id="iconLibraryList"></div>
-
         </section>
 
+        <!-- Profile Logic -->
         <section id="profilesSection">
-
             <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Profile Logic</h3>
-
             <select id="triggerCol" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-orange-400 outline-none mb-4 hidden">
-
                 <option value="">Select Trigger Column</option>
-
             </select>
-
             <div id="profileContainer" class="space-y-4"></div>
-
         </section>
 
+        <!-- Layer List -->
         <section>
-
             <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Layer List</h3>
-
             <div id="columnList" class="space-y-2"></div>
-
         </section>
 
     </div>
 
     <div class="p-6 bg-zinc-900 border-t border-zinc-800">
-
         <select id="cardSelector" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-xs text-white mb-4 outline-none"></select>
-
         <div class="grid grid-cols-2 gap-3">
-
             <button id="prevBtn" class="bg-zinc-800 py-3 rounded-xl text-[10px] font-black border border-zinc-700 hover:text-white transition-colors">PREV</button>
-
             <button id="nextBtn" class="bg-zinc-800 py-3 rounded-xl text-[10px] font-black border border-zinc-700 hover:text-white transition-colors">NEXT</button>
-
         </div>
-
     </div>
-
 </aside>
 
 <script>
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 // STATE
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 let data = [];
-
 let headers = [];
-
 let fieldConfigs = {};
-
 let profileSettings = {};
-
 let profileStyleOverrides = {};
-
 let cardOverrides = {};
-
-// richTextStore[cardIndex][header] = HTML string with <b>/<i>/<u> tags
-
-// Falls back to plain text from data row if not set
-
 let richTextStore = {};
-
 let templateAssets = {};
-
 let currentIndex = 0;
-
 let isEditMode = false;
-
 let isStyleMode = false;
-
+let isArtEditMode = false;
 let selectedHeader = null;
-
 let globalTemplateName = null;
-
 let activeEditor = null;
-
 let dragInfo = { active: false, type: null, header: null, startX: 0, startY: 0, initialConfig: null };
-
 let iconLibrary = [];
-
 let iconScaleDrag = null;
 
-// ─── DOM Refs ───────────────────────────────────────────────────────────────
+// Art state
+let artLibrary    = [];
+let artAssignments = {};
+let artTransforms  = {};
 
-const triggerColSelect  = document.getElementById('triggerCol');
+const ART_BASE_W = 375;
+const ART_BASE_H = 525;
 
-const scopeSelect       = document.getElementById('savingScopeSelect');
+// Art pan drag
+let artPanDrag = null;
 
-const currentScopeText  = document.getElementById('currentScopeText');
+function defaultArtTransform() { return { scale: 1.0, offsetX: 0, offsetY: 0 }; }
+function getArtTransform(idx) {
+    if (!artTransforms[idx]) artTransforms[idx] = defaultArtTransform();
+    return artTransforms[idx];
+}
 
-const profileContainer  = document.getElementById('profileContainer');
-
-const columnList        = document.getElementById('columnList');
-
-const fieldsContainer   = document.getElementById('fieldsContainer');
+// ─── DOM Refs ────────────────────────────────────────────────────────────────
+const triggerColSelect = document.getElementById('triggerCol');
+const scopeSelect      = document.getElementById('savingScopeSelect');
+const currentScopeText = document.getElementById('currentScopeText');
+const profileContainer = document.getElementById('profileContainer');
+const columnList       = document.getElementById('columnList');
+const fieldsContainer  = document.getElementById('fieldsContainer');
+const interactionLayer = document.getElementById('interactionLayer');
+const artLayer         = document.getElementById('artLayer');
+const artEditPanel     = document.getElementById('artEditPanel');
+const artScaleSlider   = document.getElementById('artScaleSlider');
+const artScaleDisplay  = document.getElementById('artScaleDisplay');
+const artEditToggleBtn = document.getElementById('artEditToggleBtn');
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ART EDIT MODE TOGGLE
+// ─────────────────────────────────────────────────────────────────────────────
+artEditToggleBtn.addEventListener('click', () => {
+    isArtEditMode = !isArtEditMode;
+    // Turn off layout edit mode if switching to art edit
+    if (isArtEditMode && isEditMode) {
+        isEditMode = false;
+        closeInlineEditor(true);
+        document.getElementById('formatToolbar').classList.add('hidden');
+        document.getElementById('toggleEditBtn').textContent = 'Edit Layout';
+        document.getElementById('toggleEditBtn').classList.remove('active');
+        selectedHeader = null; isStyleMode = false;
+        document.getElementById('modeToggle').checked = false;
+    }
+    artEditToggleBtn.classList.toggle('active', isArtEditMode);
+    artEditPanel.classList.toggle('hidden', !isArtEditMode);
+    artEditPanel.classList.toggle('flex', isArtEditMode);
+    artLayer.classList.toggle('art-edit-active', isArtEditMode);
+    if (isArtEditMode) syncArtSlider();
+    render();
+});
 
-// RICH TEXT HELPERS
+function syncArtSlider() {
+    const t = getArtTransform(currentIndex);
+    const pct = Math.round(t.scale * 100);
+    artScaleSlider.value = pct;
+    artScaleDisplay.textContent = pct + '%';
+}
+
+artScaleSlider.addEventListener('input', () => {
+    const t = getArtTransform(currentIndex);
+    t.scale = parseInt(artScaleSlider.value) / 100;
+    artScaleDisplay.textContent = artScaleSlider.value + '%';
+    render();
+});
+
+document.getElementById('artResetBtn').addEventListener('click', () => {
+    artTransforms[currentIndex] = defaultArtTransform();
+    syncArtSlider();
+    render();
+});
+
+// Art pan via direct drag on artLayer (only in art edit mode)
+artLayer.addEventListener('pointerdown', (e) => {
+    if (!isArtEditMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const t = getArtTransform(currentIndex);
+    artPanDrag = { startX: e.clientX, startY: e.clientY, startOffX: t.offsetX, startOffY: t.offsetY };
+    artLayer.setPointerCapture(e.pointerId);
+});
+
+artLayer.addEventListener('pointermove', (e) => {
+    if (!artPanDrag) return;
+    const t = getArtTransform(currentIndex);
+    t.offsetX = artPanDrag.startOffX + (e.clientX - artPanDrag.startX);
+    t.offsetY = artPanDrag.startOffY + (e.clientY - artPanDrag.startY);
+    render();
+    if (isArtEditMode) syncArtSlider();
+});
+
+artLayer.addEventListener('pointerup', () => { artPanDrag = null; });
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
-
- * Get the stored rich HTML for a field on the current card.
-
- * Returns an HTML string. Falls back to plain text from data.
-
- */
-
-function getRichHTML(cardIdx, header) {
-
-    if (richTextStore[cardIdx]?.[header] !== undefined) {
-
-        return richTextStore[cardIdx][header];
-
+// ART HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function resolveArtSrc(cardIdx) {
+    const assignedId = artAssignments[cardIdx];
+    if (assignedId) {
+        const art = artLibrary.find(a => a.id === assignedId);
+        if (art) return art.src;
     }
-
-    // Fallback: plain text from data, escaped
-
-    const raw = String(data[cardIdx]?.[header] ?? '');
-
-    return escapeHtml(raw);
-
-}
-
-function setRichHTML(cardIdx, header, html) {
-
-    if (!richTextStore[cardIdx]) richTextStore[cardIdx] = {};
-
-    richTextStore[cardIdx][header] = html;
-
-}
-
-function escapeHtml(text) {
-
-    return text
-
-        .replace(/&/g, '&amp;')
-
-        .replace(/</g, '&lt;')
-
-        .replace(/>/g, '&gt;');
-
-}
-
-/**
-
- * Sanitise editor innerHTML — keep only <b>, <i>, <u>, <br>, <img>.
-
- * Strip everything else but keep inner text. Also collapses nested same-tags.
-
- */
-
-function sanitiseRichHTML(html) {
-
-    const tmp = document.createElement('div');
-
-    tmp.innerHTML = html;
-
-    function clean(node) {
-
-        const out = document.createDocumentFragment();
-
-        node.childNodes.forEach(child => {
-
-            if (child.nodeType === Node.TEXT_NODE) {
-
-                out.appendChild(child.cloneNode());
-
-            } else if (child.nodeType === Node.ELEMENT_NODE) {
-
-                const tag = child.tagName.toLowerCase();
-
-                if (['b','strong','i','em','u','br','img','span'].includes(tag)) {
-
-                    let el;
-
-                    // Normalise tags
-
-                    if (tag === 'strong') el = document.createElement('b');
-
-                    else if (tag === 'em')     el = document.createElement('i');
-
-                    else                       el = document.createElement(tag);
-
-                    // Preserve inline-icon imgs
-
-                    if (tag === 'img') {
-
-                        el = child.cloneNode(true);
-
-                        out.appendChild(el);
-
-                        return;
-
-                    }
-
-                    // Preserve font-weight / font-style from spans (browser inserts these)
-
-                    if (tag === 'span') {
-
-                        const fw = child.style.fontWeight;
-
-                        const fs = child.style.fontStyle;
-
-                        const td = child.style.textDecoration;
-
-                        if (fw === 'bold' || parseInt(fw) >= 700) el = document.createElement('b');
-
-                        else if (fs === 'italic')                  el = document.createElement('i');
-
-                        else if (td && td.includes('underline'))   el = document.createElement('u');
-
-                        else { out.appendChild(clean(child)); return; }
-
-                    }
-
-                    el.appendChild(clean(child));
-
-                    out.appendChild(el);
-
-                } else {
-
-                    // Unknown tag — keep contents only
-
-                    out.appendChild(clean(child));
-
-                }
-
-            }
-
-        });
-
-        const wrapper = document.createElement('span');
-
-        wrapper.appendChild(out);
-
-        return wrapper;
-
+    const row = data[cardIdx];
+    if (!row) return null;
+    const artCol = headers.find(h => h.toLowerCase().match(/^(art|image|artwork|card.?art|card.?image)$/i));
+    if (artCol && row[artCol]) {
+        const cellVal = String(row[artCol]).trim().toLowerCase();
+        const match = artLibrary.find(a =>
+            a.name.toLowerCase() === cellVal ||
+            a.originalFilename.toLowerCase() === cellVal ||
+            a.originalFilename.toLowerCase().replace(/\.[^.]+$/, '') === cellVal
+        );
+        if (match) return match.src;
+        if (cellVal.startsWith('http') || cellVal.startsWith('data:')) return row[artCol];
     }
-
-    const cleaned = clean(tmp);
-
-    return cleaned.innerHTML;
-
-}
-
-/**
-
- * Try to extract rich text (bold/italic/underline runs) from an xlsx cell.
-
- * xlsx.js stores rich text in cell.r (rich text XML) or cell.s.
-
- * We'll attempt to parse cell.r if available.
-
- */
-
-function extractXlsxRichText(cell) {
-
-    // cell.r is the raw rich-text XML string if present
-
-    if (!cell || cell.t === undefined) return null;
-
-    // xlsx.js v0.18 stores rich text in cell.r as XML
-
-    // Format: <r><rPr><b/><i/><u/></rPr><t>text</t></r>...
-
-    if (cell.r) {
-
-        try {
-
-            // Parse the XML fragments
-
-            const parser = new DOMParser();
-
-            const xmlStr = `<root xmlns:r="urn:schemas-microsoft-com:office:spreadsheet">${cell.r}</root>`;
-
-            const doc = parser.parseFromString(xmlStr, 'text/xml');
-
-            const runs = doc.querySelectorAll('r');
-
-            if (runs.length === 0) return null;
-
-            let html = '';
-
-            runs.forEach(run => {
-
-                const rPr = run.querySelector('rPr');
-
-                const tNode = run.querySelector('t');
-
-                if (!tNode) return;
-
-                const text = escapeHtml(tNode.textContent);
-
-                if (!rPr) { html += text; return; }
-
-                const isBold      = !!rPr.querySelector('b');
-
-                const isItalic    = !!rPr.querySelector('i');
-
-                const isUnderline = !!rPr.querySelector('u');
-
-                let wrapped = text;
-
-                if (isUnderline) wrapped = `<u>${wrapped}</u>`;
-
-                if (isItalic)    wrapped = `<i>${wrapped}</i>`;
-
-                if (isBold)      wrapped = `<b>${wrapped}</b>`;
-
-                html += wrapped;
-
-            });
-
-            return html || null;
-
-        } catch(e) {
-
-            return null;
-
-        }
-
-    }
-
     return null;
-
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+function renderArtLibrary() {
+    const list = document.getElementById('artLibraryList');
+    list.innerHTML = '';
+    document.getElementById('artCountBadge').textContent = `${artLibrary.length} Image${artLibrary.length !== 1 ? 's' : ''}`;
+    const browseBtn = document.getElementById('browseArtBtn');
+    browseBtn.classList.toggle('hidden', artLibrary.length === 0);
 
-// ICON HELPERS
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-function parseTextWithIcons(text) {
-
-    if (!text) return [{ type: 'text', value: '' }];
-
-    const tokenMap = {};
-
-    iconLibrary.forEach(icon => { if (icon.token) tokenMap[icon.token.toLowerCase()] = icon; });
-
-    if (Object.keys(tokenMap).length === 0) return [{ type: 'text', value: text }];
-
-    const segments = [];
-
-    const regex = /\{([^}]+)\}/g;
-
-    let lastIndex = 0, match;
-
-    while ((match = regex.exec(text)) !== null) {
-
-        if (match.index > lastIndex) segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
-
-        const icon = tokenMap[match[1].toLowerCase()];
-
-        if (icon) segments.push({ type: 'icon', icon });
-
-        else segments.push({ type: 'text', value: match[0] });
-
-        lastIndex = match.index + match[0].length;
-
+    // Update sidebar assigned art preview
+    const assignedId = artAssignments[currentIndex];
+    const assignedArt = assignedId ? artLibrary.find(a => a.id === assignedId) : null;
+    const preview = document.getElementById('currentArtPreview');
+    if (assignedArt) {
+        document.getElementById('currentArtThumb').src = assignedArt.src;
+        document.getElementById('currentArtName').textContent = assignedArt.name;
+        preview.classList.remove('hidden');
+    } else {
+        preview.classList.add('hidden');
     }
 
-    if (lastIndex < text.length) segments.push({ type: 'text', value: text.slice(lastIndex) });
-
-    return segments;
-
-}
-
-/**
-
- * Convert a plain-text string (possibly with {tokens}) to an HTML string
-
- * suitable for richTextStore — does NOT strip existing <b>/<i>/<u>.
-
- */
-
-function plainToRichHTML(text) {
-
-    if (!text) return '';
-
-    const segments = parseTextWithIcons(text);
-
-    return segments.map(seg => {
-
-        if (seg.type === 'text') return escapeHtml(seg.value);
-
-        const em = (seg.icon.scale || 1.0) * 1.1;
-
-        return `<img src="${seg.icon.src}" class="inline-icon" style="width:${em}em;height:${em}em;" alt="" draggable="false">`;
-
-    }).join('');
-
-}
-
-/**
-
- * Inject icon images into existing rich HTML string.
-
- * Icon tokens like {fire} may appear as text nodes — replace them.
-
- */
-
-function injectIconsIntoRichHTML(html) {
-
-    if (iconLibrary.length === 0) return html;
-
-    const tokenMap = {};
-
-    iconLibrary.forEach(icon => { if (icon.token) tokenMap[icon.token.toLowerCase()] = icon; });
-
-    if (Object.keys(tokenMap).length === 0) return html;
-
-    // Replace {token} occurrences in text (not inside attributes)
-
-    return html.replace(/\{([^}]+)\}/g, (match, token) => {
-
-        const icon = tokenMap[token.toLowerCase()];
-
-        if (!icon) return match;
-
-        const em = (icon.scale || 1.0) * 1.1;
-
-        return `<img src="${icon.src}" class="inline-icon" style="width:${em}em;height:${em}em;" alt="" draggable="false">`;
-
-    });
-
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ICON LIBRARY UI
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-function renderIconLibrary() {
-
-    const list = document.getElementById('iconLibraryList');
-
-    list.innerHTML = '';
-
-    iconLibrary.forEach(icon => {
-
+    artLibrary.forEach(art => {
+        const isAssigned = artAssignments[currentIndex] === art.id;
         const entry = document.createElement('div');
-
-        entry.className = 'icon-entry';
+        entry.className = `art-asset-entry ${isAssigned ? 'art-active' : ''}`;
+        entry.title = 'Click to assign to current card';
 
         entry.innerHTML = `
-
-            <img src="${icon.src}" class="icon-thumb" alt="">
-
-            <div class="flex flex-col gap-1.5 flex-1 min-w-0">
-
-                <input type="text" class="icon-token-input" placeholder="{token}" value="${icon.token ? '{'+icon.token+'}' : ''}" data-icon-id="${icon.id}" spellcheck="false">
-
-                <span class="text-[7px] font-bold text-zinc-600 uppercase tracking-widest">Type {token} in your Excel cell</span>
-
+            <img src="${art.src}" class="art-thumb" alt="">
+            <div class="flex flex-col gap-1 flex-1 min-w-0">
+                <input type="text" class="art-name-input" value="${art.name}" spellcheck="false" title="Name key for spreadsheet art column">
+                <span class="text-[7px] font-bold text-zinc-600 uppercase tracking-widest truncate">Key: use in spreadsheet art column</span>
+                ${isAssigned ? '<span class="text-[7px] font-black text-orange-400 uppercase tracking-widest">✓ Assigned to this card</span>' : ''}
             </div>
+            <button class="art-delete-btn" title="Remove art">×</button>`;
 
-            <div class="icon-scale-wrap">
+        entry.addEventListener('click', (e) => {
+            if (e.target.matches('input') || e.target.matches('button')) return;
+            if (artAssignments[currentIndex] === art.id) delete artAssignments[currentIndex];
+            else artAssignments[currentIndex] = art.id;
+            renderArtLibrary(); render();
+        });
 
-                <label>Size</label>
-
-                <div class="icon-scale-corner" data-icon-id="${icon.id}"></div>
-
-                <span class="text-[8px] font-mono text-zinc-500 icon-scale-label">${(icon.scale||1).toFixed(1)}×</span>
-
-            </div>
-
-            <button class="icon-delete-btn" data-icon-id="${icon.id}">×</button>`;
-
-        entry.querySelector('.icon-token-input').addEventListener('input', (e) => {
-
-            const val = e.target.value.replace(/[{}]/g, '').trim();
-
-            const idx = iconLibrary.findIndex(ic => ic.id === icon.id);
-
-            if (idx !== -1) iconLibrary[idx].token = val;
-
+        entry.querySelector('.art-name-input').addEventListener('input', (e) => {
+            const idx = artLibrary.findIndex(a => a.id === art.id);
+            if (idx !== -1) artLibrary[idx].name = e.target.value.trim();
             render();
-
         });
 
-        entry.querySelector('.icon-token-input').addEventListener('blur', (e) => {
-
-            const val = e.target.value.replace(/[{}]/g, '').trim();
-
-            e.target.value = val ? `{${val}}` : '';
-
+        entry.querySelector('.art-delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            artLibrary = artLibrary.filter(a => a.id !== art.id);
+            Object.keys(artAssignments).forEach(k => { if (artAssignments[k] === art.id) delete artAssignments[k]; });
+            renderArtLibrary(); render();
         });
-
-        entry.querySelector('.icon-delete-btn').addEventListener('click', () => {
-
-            iconLibrary = iconLibrary.filter(ic => ic.id !== icon.id);
-
-            renderIconLibrary(); render();
-
-        });
-
-        const corner = entry.querySelector('.icon-scale-corner');
-
-        corner.addEventListener('pointerdown', (e) => {
-
-            e.preventDefault(); e.stopPropagation();
-
-            const idx = iconLibrary.findIndex(ic => ic.id === icon.id);
-
-            iconScaleDrag = { id: icon.id, idx, startX: e.clientX, startScale: iconLibrary[idx].scale || 1.0 };
-
-            corner.setPointerCapture(e.pointerId);
-
-        });
-
-        corner.addEventListener('pointermove', (e) => {
-
-            if (!iconScaleDrag || iconScaleDrag.id !== icon.id) return;
-
-            const newScale = Math.max(0.3, Math.min(5, iconScaleDrag.startScale + (e.clientX - iconScaleDrag.startX) * 0.02));
-
-            iconLibrary[iconScaleDrag.idx].scale = Math.round(newScale * 10) / 10;
-
-            entry.querySelector('.icon-scale-label').textContent = iconLibrary[iconScaleDrag.idx].scale.toFixed(1) + '×';
-
-            render();
-
-        });
-
-        corner.addEventListener('pointerup', () => { iconScaleDrag = null; });
 
         list.appendChild(entry);
-
     });
+}
 
+function handleArtFiles(files) {
+    Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const baseName = file.name.replace(/\.[^.]+$/, '').replace(/\s+/g, '_');
+            artLibrary.push({ id: 'art_' + Date.now() + '_' + Math.random().toString(36).slice(2), src: ev.target.result, name: baseName, originalFilename: file.name });
+            renderArtLibrary(); render();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+document.getElementById('artDropZone').addEventListener('click', () => document.getElementById('artFileInput').click());
+document.getElementById('artFileInput').addEventListener('change', (e) => { handleArtFiles(e.target.files); e.target.value = ''; });
+document.getElementById('artDropZone').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#f97316'; });
+document.getElementById('artDropZone').addEventListener('dragleave', (e) => { e.currentTarget.style.borderColor = ''; });
+document.getElementById('artDropZone').addEventListener('drop', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = ''; handleArtFiles(e.dataTransfer.files); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RICH TEXT HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function getRichHTML(cardIdx, header) {
+    if (richTextStore[cardIdx]?.[header] !== undefined) return richTextStore[cardIdx][header];
+    return escapeHtml(String(data[cardIdx]?.[header] ?? ''));
+}
+function setRichHTML(cardIdx, header, html) {
+    if (!richTextStore[cardIdx]) richTextStore[cardIdx] = {};
+    richTextStore[cardIdx][header] = html;
+}
+function escapeHtml(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function sanitiseRichHTML(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    function clean(node) {
+        const out = document.createDocumentFragment();
+        node.childNodes.forEach(child => {
+            if (child.nodeType === Node.TEXT_NODE) { out.appendChild(child.cloneNode()); return; }
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                const tag = child.tagName.toLowerCase();
+                if (['b','strong','i','em','u','br','img','span'].includes(tag)) {
+                    let el;
+                    if (tag === 'strong') el = document.createElement('b');
+                    else if (tag === 'em') el = document.createElement('i');
+                    else el = document.createElement(tag);
+                    if (tag === 'img') { el = child.cloneNode(true); out.appendChild(el); return; }
+                    if (tag === 'span') {
+                        const fw = child.style.fontWeight, fs = child.style.fontStyle, td = child.style.textDecoration;
+                        if (fw === 'bold' || parseInt(fw) >= 700) el = document.createElement('b');
+                        else if (fs === 'italic') el = document.createElement('i');
+                        else if (td && td.includes('underline')) el = document.createElement('u');
+                        else { out.appendChild(clean(child)); return; }
+                    }
+                    el.appendChild(clean(child)); out.appendChild(el);
+                } else { out.appendChild(clean(child)); }
+            }
+        });
+        const w = document.createElement('span'); w.appendChild(out); return w;
+    }
+    return clean(tmp).innerHTML;
+}
+
+function extractXlsxRichText(cell) {
+    if (!cell || cell.t === undefined) return null;
+    if (!cell.r) return null;
+    try {
+        const doc = new DOMParser().parseFromString(
+            `<root xmlns:r="urn:schemas-microsoft-com:office:spreadsheet">${cell.r}</root>`, 'text/xml');
+        const runs = doc.querySelectorAll('r');
+        if (!runs.length) return null;
+        let html = '';
+        runs.forEach(run => {
+            const rPr = run.querySelector('rPr'), tNode = run.querySelector('t');
+            if (!tNode) return;
+            const text = escapeHtml(tNode.textContent);
+            if (!rPr) { html += text; return; }
+            let w = text;
+            if (rPr.querySelector('u')) w = `<u>${w}</u>`;
+            if (rPr.querySelector('i')) w = `<i>${w}</i>`;
+            if (rPr.querySelector('b')) w = `<b>${w}</b>`;
+            html += w;
+        });
+        return html || null;
+    } catch(e) { return null; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ICON HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function injectIconsIntoRichHTML(html) {
+    if (!iconLibrary.length) return html;
+    const tokenMap = {};
+    iconLibrary.forEach(icon => { if (icon.token) tokenMap[icon.token.toLowerCase()] = icon; });
+    if (!Object.keys(tokenMap).length) return html;
+    return html.replace(/\{([^}]+)\}/g, (match, token) => {
+        const icon = tokenMap[token.toLowerCase()];
+        if (!icon) return match;
+        const em = (icon.scale || 1.0) * 1.1;
+        return `<img src="${icon.src}" class="inline-icon" style="width:${em}em;height:${em}em;" alt="" draggable="false">`;
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ICON LIBRARY UI
+// ─────────────────────────────────────────────────────────────────────────────
+function renderIconLibrary() {
+    const list = document.getElementById('iconLibraryList');
+    list.innerHTML = '';
+    iconLibrary.forEach(icon => {
+        const entry = document.createElement('div');
+        entry.className = 'icon-entry';
+        entry.innerHTML = `
+            <img src="${icon.src}" class="icon-thumb" alt="">
+            <div class="flex flex-col gap-1.5 flex-1 min-w-0">
+                <input type="text" class="icon-token-input" placeholder="{token}" value="${icon.token ? '{'+icon.token+'}' : ''}" spellcheck="false">
+                <span class="text-[7px] font-bold text-zinc-600 uppercase tracking-widest">Type {token} in your Excel cell</span>
+            </div>
+            <div class="icon-scale-wrap">
+                <label>Size</label>
+                <div class="icon-scale-corner"></div>
+                <span class="text-[8px] font-mono text-zinc-500 icon-scale-label">${(icon.scale||1).toFixed(1)}×</span>
+            </div>
+            <button class="icon-delete-btn">×</button>`;
+
+        entry.querySelector('.icon-token-input').addEventListener('input', (e) => {
+            const val = e.target.value.replace(/[{}]/g, '').trim();
+            const idx = iconLibrary.findIndex(ic => ic.id === icon.id);
+            if (idx !== -1) iconLibrary[idx].token = val;
+            render();
+        });
+        entry.querySelector('.icon-token-input').addEventListener('blur', (e) => {
+            const val = e.target.value.replace(/[{}]/g, '').trim();
+            e.target.value = val ? `{${val}}` : '';
+        });
+        entry.querySelector('.icon-delete-btn').addEventListener('click', () => {
+            iconLibrary = iconLibrary.filter(ic => ic.id !== icon.id);
+            renderIconLibrary(); render();
+        });
+        const corner = entry.querySelector('.icon-scale-corner');
+        corner.addEventListener('pointerdown', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const idx = iconLibrary.findIndex(ic => ic.id === icon.id);
+            iconScaleDrag = { id: icon.id, idx, startX: e.clientX, startScale: iconLibrary[idx].scale || 1.0 };
+            corner.setPointerCapture(e.pointerId);
+        });
+        corner.addEventListener('pointermove', (e) => {
+            if (!iconScaleDrag || iconScaleDrag.id !== icon.id) return;
+            const ns = Math.max(0.3, Math.min(5, iconScaleDrag.startScale + (e.clientX - iconScaleDrag.startX) * 0.02));
+            iconLibrary[iconScaleDrag.idx].scale = Math.round(ns * 10) / 10;
+            entry.querySelector('.icon-scale-label').textContent = iconLibrary[iconScaleDrag.idx].scale.toFixed(1) + '×';
+            render();
+        });
+        corner.addEventListener('pointerup', () => { iconScaleDrag = null; });
+        list.appendChild(entry);
+    });
 }
 
 document.getElementById('iconDropZone').addEventListener('click', () => document.getElementById('iconFileInput').click());
-
 document.getElementById('iconFileInput').addEventListener('change', (e) => { handleIconFiles(e.target.files); e.target.value = ''; });
-
 document.getElementById('iconDropZone').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#f97316'; });
-
 document.getElementById('iconDropZone').addEventListener('dragleave', (e) => { e.currentTarget.style.borderColor = ''; });
-
 document.getElementById('iconDropZone').addEventListener('drop', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = ''; handleIconFiles(e.dataTransfer.files); });
 
 function handleIconFiles(files) {
-
     Array.from(files).forEach(file => {
-
         if (!file.type.startsWith('image/')) return;
-
         const reader = new FileReader();
-
         reader.onload = (ev) => {
-
             const baseName = file.name.replace(/\.[^.]+$/, '').replace(/\s+/g, '_').toLowerCase();
-
             iconLibrary.push({ id: 'icon_' + Date.now() + '_' + Math.random().toString(36).slice(2), src: ev.target.result, token: baseName, scale: 1.0 });
-
             renderIconLibrary(); render();
-
         };
-
         reader.readAsDataURL(file);
-
     });
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // MINI FORMAT BAR
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 const miniBar = document.getElementById('miniFormatBar');
 
-function positionMiniBar(editorEl) {
-
+function positionMiniBar() {
     const cardRect = document.getElementById('cardPreview').getBoundingClientRect();
-
     const sel = window.getSelection();
-
-    if (!sel || sel.rangeCount === 0) { hideMiniBar(); return; }
-
+    if (!sel || !sel.rangeCount) { hideMiniBar(); return; }
     const range = sel.getRangeAt(0);
-
     if (range.collapsed) { hideMiniBar(); return; }
-
     const rect = range.getBoundingClientRect();
-
     if (!rect.width) { hideMiniBar(); return; }
-
-    // Position above the selection, relative to cardPreview
-
-    const barLeft = rect.left - cardRect.left + rect.width / 2 - 70;
-
-    const barTop  = rect.top  - cardRect.top  - 44;
-
-    miniBar.style.left = Math.max(0, barLeft) + 'px';
-
-    miniBar.style.top  = Math.max(0, barTop)  + 'px';
-
+    miniBar.style.left = Math.max(0, rect.left - cardRect.left + rect.width / 2 - 70) + 'px';
+    miniBar.style.top  = Math.max(0, rect.top  - cardRect.top  - 44) + 'px';
     miniBar.classList.add('visible');
-
     updateMiniBarState();
-
 }
-
-function hideMiniBar() {
-
-    miniBar.classList.remove('visible');
-
-}
-
+function hideMiniBar() { miniBar.classList.remove('visible'); }
 function updateMiniBarState() {
-
     document.getElementById('miniBold').classList.toggle('active',      document.queryCommandState('bold'));
-
     document.getElementById('miniItalic').classList.toggle('active',    document.queryCommandState('italic'));
-
     document.getElementById('miniUnderline').classList.toggle('active', document.queryCommandState('underline'));
-
 }
-
 function applyFormat(cmd) {
-
     if (!activeEditor) return;
-
     activeEditor.focus();
-
     document.execCommand(cmd, false, null);
-
-    // Save immediately
-
-    commitEditorToStore();
-
-    updateMiniBarState();
-
+    commitEditorToStore(); updateMiniBarState();
 }
-
-// Mini bar buttons — use mousedown so focus isn't lost from editor
-
 document.getElementById('miniBold').addEventListener('mousedown',      (e) => { e.preventDefault(); applyFormat('bold'); });
-
 document.getElementById('miniItalic').addEventListener('mousedown',    (e) => { e.preventDefault(); applyFormat('italic'); });
-
 document.getElementById('miniUnderline').addEventListener('mousedown', (e) => { e.preventDefault(); applyFormat('underline'); });
-
 document.getElementById('miniClear').addEventListener('mousedown', (e) => {
-
     e.preventDefault();
-
     if (!activeEditor) return;
-
-    activeEditor.focus();
-
-    document.execCommand('removeFormat', false, null);
-
-    commitEditorToStore();
-
-    hideMiniBar();
-
+    activeEditor.focus(); document.execCommand('removeFormat', false, null);
+    commitEditorToStore(); hideMiniBar();
 });
 
-// Keyboard shortcuts inside editor
-
 function handleEditorKeydown(e) {
-
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-
         if (e.key === 'b') { e.preventDefault(); applyFormat('bold'); }
-
         if (e.key === 'i') { e.preventDefault(); applyFormat('italic'); }
-
         if (e.key === 'u') { e.preventDefault(); applyFormat('underline'); }
-
     }
-
     if (e.key === 'Escape') { closeInlineEditor(true); e.preventDefault(); }
-
     if (e.key === 'Enter' && !e.shiftKey) { closeInlineEditor(true); e.preventDefault(); }
-
     e.stopPropagation();
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // INLINE EDITOR
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 function commitEditorToStore() {
-
     if (!activeEditor) return;
-
     const header = activeEditor.dataset.header;
-
-    const rawHTML = activeEditor.innerHTML;
-
-    const clean   = sanitiseRichHTML(rawHTML);
-
+    const clean = sanitiseRichHTML(activeEditor.innerHTML);
     setRichHTML(currentIndex, header, clean);
-
-    // Update display live
-
     const display = document.querySelector('[data-field="' + header + '"]');
-
     if (display) {
-
-        const inner = display.querySelector('.field-rich-content') || display;
-
-        inner.innerHTML = injectIconsIntoRichHTML(clean);
-
+        (display.querySelector('.field-rich-content') || display).innerHTML = injectIconsIntoRichHTML(clean);
     }
-
     updateColumnUI();
-
 }
 
 function openInlineEditor(header) {
-
     closeInlineEditor(true);
-
     const conf = getConfigByScope(header);
-
     const alignment = conf.textAlign || 'center';
-
     const ed = document.createElement('div');
-
-    ed.contentEditable = 'true';
-
-    ed.spellcheck = false;
-
-    ed.dataset.header = header;
-
+    ed.contentEditable = 'true'; ed.spellcheck = false; ed.dataset.header = header;
     ed.className = `inline-editor align-${alignment}`;
-
-    ed.style.cssText = `
-
-        top:${conf.top}px; left:${conf.left}px;
-
-        width:${conf.width}px; min-height:${conf.height}px;
-
-        font-size:${conf.fontSize}px; font-weight:${conf.fontWeight};
-
-        color:${conf.color}; font-style:${conf.fontStyle||'normal'};
-
-    `;
-
-    // Load current rich HTML into editor
-
-    const storedHTML = getRichHTML(currentIndex, header);
-
-    ed.innerHTML = storedHTML;
-
-    ed.addEventListener('input', () => {
-
-        commitEditorToStore();
-
-        positionMiniBar(ed);
-
-    });
-
+    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};`;
+    ed.innerHTML = getRichHTML(currentIndex, header);
+    ed.addEventListener('input', () => { commitEditorToStore(); positionMiniBar(); });
     ed.addEventListener('keydown', handleEditorKeydown);
-
-    ed.addEventListener('mouseup', () => {
-
-        requestAnimationFrame(() => positionMiniBar(ed));
-
-    });
-
-    ed.addEventListener('keyup', () => {
-
-        requestAnimationFrame(() => positionMiniBar(ed));
-
-    });
-
+    ed.addEventListener('mouseup', () => { requestAnimationFrame(positionMiniBar); });
+    ed.addEventListener('keyup',   () => { requestAnimationFrame(positionMiniBar); });
     ed.addEventListener('blur', () => {
-
         setTimeout(() => {
-
-            // Only close if focus went outside both editor AND mini bar
-
-            const focused = document.activeElement;
-
-            if (focused && (focused === ed || miniBar.contains(focused))) return;
-
+            const f = document.activeElement;
+            if (f && (f === ed || miniBar.contains(f))) return;
             if (activeEditor) closeInlineEditor(true);
-
         }, 200);
-
     });
-
     document.getElementById('cardPreview').appendChild(ed);
-
-    // Move miniBar inside cardPreview for correct relative positioning
-
     document.getElementById('cardPreview').appendChild(miniBar);
-
     miniBar.style.position = 'absolute';
-
-    activeEditor = ed;
-
-    ed.focus();
-
-    // Place cursor at end
-
+    activeEditor = ed; ed.focus();
     try {
-
-        const range = document.createRange();
-
-        range.selectNodeContents(ed);
-
-        range.collapse(false);
-
-        window.getSelection().removeAllRanges();
-
-        window.getSelection().addRange(range);
-
-    } catch(err) {}
-
-    // Show hint
-
+        const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false);
+        window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+    } catch(e) {}
     document.getElementById('richHint').classList.remove('hidden');
-
 }
 
 function closeInlineEditor(save) {
-
     if (!activeEditor) return;
-
     if (save) commitEditorToStore();
-
-    activeEditor.remove();
-
-    activeEditor = null;
-
-    hideMiniBar();
-
-    render();
-
+    activeEditor.remove(); activeEditor = null; hideMiniBar(); render();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // SCOPE / PROFILE HELPERS
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 function getProfileVal() {
-
     const t = triggerColSelect.value;
-
     return t ? String(data[currentIndex]?.[t] || '').trim() : null;
-
 }
-
 function getConfigByScope(h) {
-
     const pVal = getProfileVal();
-
-    // In edit mode, only read from the selected scope layer (allows toggling between layers)
     if (isEditMode) {
         const s = scopeSelect.value;
-        if (s === 'card')    return cardOverrides[currentIndex]?.[h]         || (pVal && profileStyleOverrides[pVal]?.[h]) || fieldConfigs[h];
+        if (s === 'card')    return cardOverrides[currentIndex]?.[h] || (pVal && profileStyleOverrides[pVal]?.[h]) || fieldConfigs[h];
         if (s === 'profile') return (pVal && profileStyleOverrides[pVal]?.[h]) || fieldConfigs[h];
-        return fieldConfigs[h]; // global
+        return fieldConfigs[h];
     }
-
-    // View mode: full cascade card → profile → global
-    if (cardOverrides[currentIndex]?.[h])         return cardOverrides[currentIndex][h];
-
+    if (cardOverrides[currentIndex]?.[h]) return cardOverrides[currentIndex][h];
     if (pVal && profileStyleOverrides[pVal]?.[h]) return profileStyleOverrides[pVal][h];
-
     return fieldConfigs[h];
-
 }
-
 function getVisibilityByScope(h) {
-
     const pVal = getProfileVal();
-
-    // In edit mode, only read from the selected scope layer
     if (isEditMode) {
         const s = scopeSelect.value;
         if (s === 'card')    return cardOverrides[currentIndex]?.[h]?.visible ?? (pVal && profileSettings[pVal]?.fields?.[h] !== undefined ? profileSettings[pVal].fields[h] : fieldConfigs[h].visible);
         if (s === 'profile') return (pVal && profileSettings[pVal]?.fields?.[h] !== undefined) ? profileSettings[pVal].fields[h] : fieldConfigs[h].visible;
-        return fieldConfigs[h].visible; // global
+        return fieldConfigs[h].visible;
     }
-
-    // View mode: full cascade
     if (cardOverrides[currentIndex]?.[h]?.visible !== undefined) return cardOverrides[currentIndex][h].visible;
-
     if (pVal && profileSettings[pVal]?.fields?.[h] !== undefined) return profileSettings[pVal].fields[h];
-
     return fieldConfigs[h].visible;
-
 }
-
 function updateScopeText() {
-
     const clearBtn = document.getElementById('clearScopeBtn');
-
     if (isEditMode) {
-
-        const v = scopeSelect.value;
-
-        currentScopeText.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-
-        clearBtn.classList.add('hidden');
-
-        return;
-
+        currentScopeText.textContent = scopeSelect.value.charAt(0).toUpperCase() + scopeSelect.value.slice(1);
+        clearBtn.classList.add('hidden'); return;
     }
-
     const pVal = getProfileVal();
-
     if (cardOverrides[currentIndex] && Object.keys(cardOverrides[currentIndex]).length > 0) {
-        currentScopeText.textContent = 'Card';
-        clearBtn.classList.remove('hidden');
-        clearBtn.title = 'Remove all card-level overrides and revert to Global/Profile';
-        return;
+        currentScopeText.textContent = 'Card'; clearBtn.classList.remove('hidden'); return;
     }
-
     if (pVal) {
-
         const hasV = profileSettings[pVal]?.fields && Object.keys(profileSettings[pVal].fields).length > 0;
-
         const hasS = profileStyleOverrides[pVal] && Object.keys(profileStyleOverrides[pVal]).length > 0;
-
-        if (hasV || hasS) {
-            currentScopeText.textContent = 'Profile';
-            clearBtn.classList.remove('hidden');
-            clearBtn.title = 'Remove all profile-level overrides for this profile';
-            return;
-        }
-
+        if (hasV || hasS) { currentScopeText.textContent = 'Profile'; clearBtn.classList.remove('hidden'); return; }
     }
-
-    currentScopeText.textContent = 'Global';
-    clearBtn.classList.add('hidden');
-
+    currentScopeText.textContent = 'Global'; clearBtn.classList.add('hidden');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // RENDER
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 function render(forExport = false) {
-
-    fieldsContainer.innerHTML = '';
-
-    interactionLayer.innerHTML = '';
-
-    if (data.length === 0) return;
+    fieldsContainer.innerHTML = ''; interactionLayer.innerHTML = '';
+    if (!data.length) return;
 
     const row = data[currentIndex];
-
     const pVal = getProfileVal() || '';
-
     document.getElementById('activeProfileDisplay').textContent = pVal ? `Profile: ${pVal}` : 'Global Context';
 
+    // Template
     let finalTemplateName = globalTemplateName;
-
     if (pVal && profileSettings[pVal]?.frame) finalTemplateName = profileSettings[pVal].frame;
-
     const finalTemplate = templateAssets[finalTemplateName];
-
     document.getElementById('templateLayer').style.backgroundImage = finalTemplate ? `url('${finalTemplate}')` : 'none';
 
-    const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
+    // Art layer
+    const artSrc = resolveArtSrc(currentIndex);
+    const artT = getArtTransform(currentIndex);
+    const imgW = Math.round(ART_BASE_W * artT.scale);
+    const imgH = Math.round(ART_BASE_H * artT.scale);
 
-    document.getElementById('artLayer').style.backgroundImage = (artCol && row[artCol]) ? `url('${row[artCol]}')` : 'none';
+    let finalArtSrc = artSrc;
+    if (!finalArtSrc) {
+        const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
+        const urlVal = artCol ? String(row[artCol] || '') : '';
+        if (urlVal.startsWith('http') || urlVal.startsWith('data:')) finalArtSrc = urlVal;
+    }
 
+    if (finalArtSrc) {
+        artLayer.style.backgroundImage    = `url('${finalArtSrc}')`;
+        artLayer.style.backgroundSize     = `${imgW}px ${imgH}px`;
+        artLayer.style.backgroundPosition = `${artT.offsetX}px ${artT.offsetY}px`;
+    } else {
+        artLayer.style.backgroundImage    = 'none';
+        artLayer.style.backgroundSize     = '';
+        artLayer.style.backgroundPosition = '';
+    }
+
+    // Sync slider if art edit mode is on and not exporting
+    if (!forExport && isArtEditMode) syncArtSlider();
+
+    // Fields
     headers.forEach(h => {
-
         if (h.toLowerCase().match(/art|image|template/)) return;
-
         if (!getVisibilityByScope(h)) return;
 
         const conf = getConfigByScope(h);
-
         const alignment = conf.textAlign || 'center';
-
-        // Get rich HTML, inject icons
-
-        let richHTML = getRichHTML(currentIndex, h);
-
-        richHTML = injectIconsIntoRichHTML(richHTML);
+        let richHTML = injectIconsIntoRichHTML(getRichHTML(currentIndex, h));
 
         const div = document.createElement('div');
-
         div.className = `dynamic-field align-${alignment}`;
-
         div.dataset.field = h;
-
         if (forExport) div.classList.add('export-nudge');
-
         div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};`;
-
         const span = document.createElement('span');
-
-        span.className = 'field-rich-content';
-
-        span.innerHTML = richHTML;
-
-        div.appendChild(span);
-
-        fieldsContainer.appendChild(div);
-
-        // Interaction box
+        span.className = 'field-rich-content'; span.innerHTML = richHTML;
+        div.appendChild(span); fieldsContainer.appendChild(div);
 
         if (isEditMode && !forExport) {
-
             const interact = document.createElement('div');
-
             interact.className = `interaction-box ${selectedHeader === h ? 'active-field' : ''}`;
-
             interact.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;`;
-
             interact.setAttribute('data-header', h);
-
             if (selectedHeader === h) {
-
-                const resizer = document.createElement('div');
-
-                resizer.className = 'resize-handle';
-
-                resizer.setAttribute('data-type', 'resize');
-
-                interact.appendChild(resizer);
-
+                const r = document.createElement('div'); r.className = 'resize-handle'; r.setAttribute('data-type', 'resize'); interact.appendChild(r);
                 document.getElementById('coordsBox').textContent = `${h}: ${conf.left}, ${conf.top}`;
-
             }
-
             interactionLayer.appendChild(interact);
-
         }
-
     });
 
-    if (!forExport) {
-
-        updateColumnUI();
-
-        updateProfileUI();
-
-        updateScopeText();
-
-    }
-
+    if (!forExport) { updateColumnUI(); updateProfileUI(); updateScopeText(); renderArtLibrary(); }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // PROFILE UI
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 function updateProfileUI() {
-
     const trigger = triggerColSelect.value;
-
     if (!trigger) { profileContainer.innerHTML = ''; return; }
-
     const uniqueValues = [...new Set(data.map(row => String(row[trigger] || '').trim()))].filter(Boolean);
-
     const currentCardPVal = String(data[currentIndex][trigger] || '').trim();
-
     profileContainer.innerHTML = '';
 
     uniqueValues.forEach(val => {
-
         if (!profileSettings[val]) profileSettings[val] = { frame: '', fields: {} };
-
         const settings = profileSettings[val];
-
         const isActive = val === currentCardPVal;
-
         const card = document.createElement('div');
-
         card.className = `profile-card ${isActive ? 'active-profile' : ''}`;
 
         let frameOptions = '<option value="">Default Frame</option>';
-
         Object.keys(templateAssets).forEach(name => {
-
             frameOptions += `<option value="${name}" ${settings.frame === name ? 'selected' : ''}>${name}</option>`;
-
         });
 
         card.innerHTML = `
-
             <div class="flex items-center justify-between mb-4">
-
                 <div class="flex flex-col">
-
                     <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Profile Name</span>
-
                     <div class="text-[11px] font-black text-white uppercase tracking-tighter">${val}</div>
-
                 </div>
-
                 ${isActive ? '<div class="text-[7px] font-black bg-orange-600 text-white px-2 py-0.5 rounded tracking-widest">ACTIVE</div>' : ''}
-
             </div>
-
             <div class="mb-3">
-
                 <label class="text-[8px] font-black text-zinc-500 uppercase block mb-1">Frame Reference</label>
-
-                <select data-profile="${val}" class="profile-frame-select w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] text-orange-400 outline-none">${frameOptions}</select>
-
+                <select class="profile-frame-select w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] text-orange-400 outline-none">${frameOptions}</select>
             </div>
-
             <div class="mt-4 border-t border-zinc-800 pt-3 space-y-2">
-
                 <span class="text-[8px] font-black text-zinc-500 uppercase block mb-2">Layer Overrides</span>
-
                 ${headers.map(h => {
-
                     if (h.toLowerCase().match(/art|image|template/)) return '';
-
                     const isVisible = settings.fields[h] !== undefined ? settings.fields[h] : fieldConfigs[h].visible;
-
-                    return `<div class="flex items-center justify-between">
-
-                        <span class="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">${h}</span>
-
-                        <input type="checkbox" data-profile="${val}" data-header="${h}" ${isVisible ? 'checked' : ''} class="profile-field-toggle accent-orange-500 w-3 h-3">
-
-                    </div>`;
-
+                    return `<div class="flex items-center justify-between"><span class="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">${h}</span><input type="checkbox" data-header="${h}" ${isVisible ? 'checked' : ''} class="profile-field-toggle accent-orange-500 w-3 h-3"></div>`;
                 }).join('')}
-
             </div>`;
 
         card.querySelector('.profile-frame-select').onchange = (e) => { profileSettings[val].frame = e.target.value; render(); };
-
         card.querySelectorAll('.profile-field-toggle').forEach(chk => {
-
             chk.onchange = (e) => { profileSettings[val].fields[e.target.getAttribute('data-header')] = e.target.checked; render(); };
-
         });
-
         profileContainer.appendChild(card);
-
     });
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // COLUMN UI
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 function updateColumnUI() {
-
     columnList.innerHTML = '';
-
     headers.forEach(h => {
-
         if (h.toLowerCase().match(/art|image|template/)) return;
-
         const isVisible = getVisibilityByScope(h);
-
-        const hasRich   = richTextStore[currentIndex]?.[h] !== undefined;
-
-        const richHTML  = richTextStore[currentIndex]?.[h] || '';
-
-        const hasFmt    = /<[biu]>/.test(richHTML);
+        const hasRich = richTextStore[currentIndex]?.[h] !== undefined;
+        const hasFmt  = /<[biu]>/.test(richTextStore[currentIndex]?.[h] || '');
 
         const item = document.createElement('div');
-
         item.className = `flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${selectedHeader === h ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-900/50 border border-transparent'}`;
-
         item.onclick = () => { selectedHeader = h; render(); updateToolbarUI(); };
-
         item.innerHTML = `
-
             <span class="text-[10px] font-bold ${selectedHeader === h ? 'text-white' : 'text-zinc-500'} uppercase flex items-center gap-1 flex-wrap">
-
                 ${h}
-
                 ${hasRich ? '<span class="badge-edited">EDITED</span>' : ''}
-
                 ${hasFmt  ? '<span class="badge-rich">RICH</span>'   : ''}
-
             </span>
-
             <input type="checkbox" ${isVisible ? 'checked' : ''} class="accent-orange-500 col-vis-toggle">`;
 
         item.querySelector('.col-vis-toggle').onclick = (e) => {
-
             e.stopPropagation();
-
             const newVal = e.target.checked;
-
-            const targetScope = scopeSelect.value;
-
             const pVal = getProfileVal();
-
-            if (targetScope === 'card') {
-
+            const ts = scopeSelect.value;
+            if (ts === 'card') {
                 if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
-
                 if (!cardOverrides[currentIndex][h]) cardOverrides[currentIndex][h] = JSON.parse(JSON.stringify(getConfigByScope(h)));
-
                 cardOverrides[currentIndex][h].visible = newVal;
-
-            } else if (targetScope === 'profile' && pVal) {
-
+            } else if (ts === 'profile' && pVal) {
                 if (!profileSettings[pVal].fields) profileSettings[pVal].fields = {};
-
                 profileSettings[pVal].fields[h] = newVal;
-
             } else {
-
                 fieldConfigs[h].visible = newVal;
-
             }
-
             render();
-
         };
-
         columnList.appendChild(item);
-
     });
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // TOOLBAR UI
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 function updateToolbarUI() {
-
-    const styleControls = document.getElementById('styleControls');
-
+    const sc = document.getElementById('styleControls');
     if (isEditMode && isStyleMode && selectedHeader) {
-
-        styleControls.classList.remove('hidden');
-
+        sc.classList.remove('hidden');
         const conf = getConfigByScope(selectedHeader);
-
         document.getElementById('fontSizeSlider').value = conf.fontSize;
-
         document.getElementById('fontSizeDisplay').textContent = `${conf.fontSize}`;
-
         document.getElementById('fontColorPicker').value = conf.color;
-
         updateAlignButtons(conf.textAlign || 'center');
-
-    } else {
-
-        styleControls.classList.add('hidden');
-
-    }
-
+    } else { sc.classList.add('hidden'); }
     const hint = document.getElementById('modeHint');
-
     if (hint) {
-
         if (isStyleMode) { hint.textContent = '✦ Style mode — dbl-click to edit & select text for B/I/U'; hint.style.color = '#f97316'; }
-
         else             { hint.textContent = '▶ Move mode — toggle Style for more options'; hint.style.color = '#60a5fa'; }
-
     }
-
     updateScopeText();
-
 }
-
-function saveAlignChange(alignment) { saveStyleChange('textAlign', alignment); updateAlignButtons(alignment); }
-
-function updateAlignButtons(alignment) {
-
-    document.getElementById('btnAlignLeft').classList.toggle('active',   alignment === 'left');
-
-    document.getElementById('btnAlignCenter').classList.toggle('active', alignment === 'center');
-
-    document.getElementById('btnAlignRight').classList.toggle('active',  alignment === 'right');
-
+function saveAlignChange(a) { saveStyleChange('textAlign', a); updateAlignButtons(a); }
+function updateAlignButtons(a) {
+    document.getElementById('btnAlignLeft').classList.toggle('active',   a === 'left');
+    document.getElementById('btnAlignCenter').classList.toggle('active', a === 'center');
+    document.getElementById('btnAlignRight').classList.toggle('active',  a === 'right');
 }
-
 document.getElementById('btnAlignLeft').onclick   = () => saveAlignChange('left');
-
 document.getElementById('btnAlignCenter').onclick = () => saveAlignChange('center');
-
 document.getElementById('btnAlignRight').onclick  = () => saveAlignChange('right');
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-// DRAG / RESIZE
-
+// DRAG / RESIZE (text fields)
 // ─────────────────────────────────────────────────────────────────────────────
-
-const interactionLayer = document.getElementById('interactionLayer');
-
-// (also add remaining refs not yet declared)
-
-// triggerColSelect, scopeSelect, columnList, profileContainer, fieldsContainer already declared above
-
 interactionLayer.addEventListener('dblclick', (e) => {
-
     if (!isEditMode || !isStyleMode) return;
-
     const target = e.target.closest('.interaction-box');
-
-    if (!target) return;
-
-    if (e.target.getAttribute('data-type') === 'resize') return;
-
+    if (!target || e.target.getAttribute('data-type') === 'resize') return;
     selectedHeader = target.getAttribute('data-header');
-
     dragInfo.active = false;
-
     openInlineEditor(selectedHeader);
-
 });
 
 interactionLayer.addEventListener('pointerdown', (e) => {
-
     if (!isEditMode) return;
-
     const target = e.target.closest('.interaction-box');
-
-    if (!target) {
-
-        selectedHeader = null; closeInlineEditor(true); render(); updateToolbarUI(); return;
-
-    }
-
+    if (!target) { selectedHeader = null; closeInlineEditor(true); render(); updateToolbarUI(); return; }
     const header = target.getAttribute('data-header');
-
     const type = e.target.getAttribute('data-type') === 'resize' ? 'resize' : 'drag';
-
     if (selectedHeader !== header) {
-
         interactionLayer.querySelectorAll('.interaction-box').forEach(b => b.classList.toggle('active-field', b.getAttribute('data-header') === header));
-
-        const activeBox = interactionLayer.querySelector('.interaction-box.active-field');
-
-        if (activeBox && !activeBox.querySelector('.resize-handle')) {
-
-            const r = document.createElement('div'); r.className = 'resize-handle'; r.setAttribute('data-type', 'resize'); activeBox.appendChild(r);
-
+        const ab = interactionLayer.querySelector('.interaction-box.active-field');
+        if (ab && !ab.querySelector('.resize-handle')) {
+            const r = document.createElement('div'); r.className = 'resize-handle'; r.setAttribute('data-type', 'resize'); ab.appendChild(r);
         }
-
         selectedHeader = header; updateToolbarUI();
-
     }
-
     if (isStyleMode && type === 'drag') return;
-
     const currentConf = getConfigByScope(header);
-
     dragInfo = { active: true, type, header, startX: e.clientX, startY: e.clientY, initialConfig: JSON.parse(JSON.stringify(currentConf)) };
-
     interactionLayer.setPointerCapture(e.pointerId);
-
 });
 
 interactionLayer.addEventListener('pointermove', (e) => {
-
     if (!dragInfo.active) return;
-
-    const targetScope = scopeSelect.value, pVal = getProfileVal();
-
-    let ts;
-
-    if (targetScope === 'card') {
-
+    const pVal = getProfileVal(), ts = scopeSelect.value;
+    let t;
+    if (ts === 'card') {
         if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
-
         if (!cardOverrides[currentIndex][dragInfo.header]) cardOverrides[currentIndex][dragInfo.header] = JSON.parse(JSON.stringify(dragInfo.initialConfig));
-
-        ts = cardOverrides[currentIndex][dragInfo.header];
-
-    } else if (targetScope === 'profile' && pVal) {
-
+        t = cardOverrides[currentIndex][dragInfo.header];
+    } else if (ts === 'profile' && pVal) {
         if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
-
         if (!profileStyleOverrides[pVal][dragInfo.header]) profileStyleOverrides[pVal][dragInfo.header] = JSON.parse(JSON.stringify(dragInfo.initialConfig));
-
-        ts = profileStyleOverrides[pVal][dragInfo.header];
-
-    } else { ts = fieldConfigs[dragInfo.header]; }
-
+        t = profileStyleOverrides[pVal][dragInfo.header];
+    } else { t = fieldConfigs[dragInfo.header]; }
     const dx = e.clientX - dragInfo.startX, dy = e.clientY - dragInfo.startY;
-
-    if (dragInfo.type === 'drag') { ts.top = Math.round(dragInfo.initialConfig.top + dy); ts.left = Math.round(dragInfo.initialConfig.left + dx); }
-
-    else { ts.width = Math.max(10, Math.round(dragInfo.initialConfig.width + dx)); ts.height = Math.max(10, Math.round(dragInfo.initialConfig.height + dy)); }
-
+    if (dragInfo.type === 'drag') { t.top = Math.round(dragInfo.initialConfig.top + dy); t.left = Math.round(dragInfo.initialConfig.left + dx); }
+    else { t.width = Math.max(10, Math.round(dragInfo.initialConfig.width + dx)); t.height = Math.max(10, Math.round(dragInfo.initialConfig.height + dy)); }
     render();
-
 });
 
 interactionLayer.addEventListener('pointerup', (e) => {
-
     if (dragInfo.active) { dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); }
-
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-// STYLE CHANGES (whole-field)
-
+// STYLE CHANGES
 // ─────────────────────────────────────────────────────────────────────────────
-
 function saveStyleChange(key, value) {
-
     if (!selectedHeader) return;
-
-    const targetScope = scopeSelect.value, pVal = getProfileVal();
-
+    const pVal = getProfileVal(), ts = scopeSelect.value;
     let target;
-
-    if (targetScope === 'card') {
-
+    if (ts === 'card') {
         if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
-
         if (!cardOverrides[currentIndex][selectedHeader]) cardOverrides[currentIndex][selectedHeader] = JSON.parse(JSON.stringify(getConfigByScope(selectedHeader)));
-
         target = cardOverrides[currentIndex][selectedHeader];
-
-    } else if (targetScope === 'profile' && pVal) {
-
+    } else if (ts === 'profile' && pVal) {
         if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
-
         if (!profileStyleOverrides[pVal][selectedHeader]) profileStyleOverrides[pVal][selectedHeader] = JSON.parse(JSON.stringify(getConfigByScope(selectedHeader)));
-
         target = profileStyleOverrides[pVal][selectedHeader];
-
     } else { target = fieldConfigs[selectedHeader]; }
-
     target[key] = value; render();
-
 }
 
 document.getElementById('fontSizeSlider').oninput = (e) => { document.getElementById('fontSizeDisplay').textContent = e.target.value; saveStyleChange('fontSize', parseInt(e.target.value)); };
-
 document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
-
 document.getElementById('btnBold').onclick   = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontWeight', c.fontWeight === 700 ? 400 : 700); };
-
 document.getElementById('btnItalic').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontStyle', c.fontStyle === 'italic' ? 'normal' : 'italic'); };
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // EVENT WIRING
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 document.getElementById('dropZoneData').onclick      = () => document.getElementById('fileInput').click();
-
 document.getElementById('fileInput').onchange        = (e) => processDataFile(e.target.files[0]);
-
 document.getElementById('dropZoneTemplates').onclick = () => document.getElementById('templateFiles').click();
-
 document.getElementById('templateFiles').onchange    = (e) => handleTemplates(e.target.files);
-
-document.getElementById('prevBtn').onclick           = () => { if (currentIndex > 0) { currentIndex--; render(); } };
-
-document.getElementById('nextBtn').onclick           = () => { if (currentIndex < data.length - 1) { currentIndex++; render(); } };
-
-document.getElementById('cardSelector').onchange     = (e) => { currentIndex = parseInt(e.target.value); render(); };
-
+document.getElementById('prevBtn').onclick           = () => { if (currentIndex > 0) { currentIndex--; render(); if (isArtEditMode) syncArtSlider(); } };
+document.getElementById('nextBtn').onclick           = () => { if (currentIndex < data.length - 1) { currentIndex++; render(); if (isArtEditMode) syncArtSlider(); } };
+document.getElementById('cardSelector').onchange     = (e) => { currentIndex = parseInt(e.target.value); render(); if (isArtEditMode) syncArtSlider(); };
 document.getElementById('downloadCurrentBtn').onclick = downloadCurrent;
-
 document.getElementById('exportAllBtn').onclick       = exportAllCards;
-
-document.getElementById('triggerCol').onchange        = () => { render(); };
-
+document.getElementById('triggerCol').onchange        = () => render();
 document.getElementById('savingScopeSelect').onchange = () => { updateScopeText(); updateToolbarUI(); render(); };
 
 document.getElementById('clearScopeBtn').onclick = () => {
-    const scope = currentScopeText.textContent;
-    const pVal  = getProfileVal();
-    if (scope === 'Card') {
-        delete cardOverrides[currentIndex];
-    } else if (scope === 'Profile' && pVal) {
-        if (profileSettings[pVal])      profileSettings[pVal].fields = {};
+    const scope = currentScopeText.textContent, pVal = getProfileVal();
+    if (scope === 'Card') delete cardOverrides[currentIndex];
+    else if (scope === 'Profile' && pVal) {
+        if (profileSettings[pVal]) profileSettings[pVal].fields = {};
         if (profileStyleOverrides[pVal]) delete profileStyleOverrides[pVal];
     }
     render();
 };
 
 document.getElementById('toggleEditBtn').onclick = () => {
-
     isEditMode = !isEditMode;
-
+    // Turn off art edit mode if switching to layout edit
+    if (isEditMode && isArtEditMode) {
+        isArtEditMode = false;
+        artEditToggleBtn.classList.remove('active');
+        artEditPanel.classList.add('hidden');
+        artEditPanel.classList.remove('flex');
+        artLayer.classList.remove('art-edit-active');
+    }
     closeInlineEditor(true);
-
     document.getElementById('formatToolbar').classList.toggle('hidden', !isEditMode);
-
-    document.getElementById('toggleEditBtn').textContent = isEditMode ? 'Exit Editor' : 'Edit Layout';
-
+    document.getElementById('toggleEditBtn').textContent = isEditMode ? 'Exit Layout' : 'Edit Layout';
+    document.getElementById('toggleEditBtn').classList.toggle('active', isEditMode);
     if (!isEditMode) { selectedHeader = null; isStyleMode = false; document.getElementById('modeToggle').checked = false; }
-
-    else { document.getElementById('savingScopeSelect').value = 'global'; }
-
+    else { scopeSelect.value = 'global'; }
     render();
-
 };
 
 document.getElementById('modeToggle').onchange = (e) => { isStyleMode = e.target.checked; updateToolbarUI(); };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Clear data ────────────────────────────────────────────────────────────────
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+    if (!confirm('Clear the loaded spreadsheet? All field edits will be lost.')) return;
+    data = []; headers = []; richTextStore = {}; fieldConfigs = {};
+    profileSettings = {}; profileStyleOverrides = {}; cardOverrides = {};
+    document.getElementById('fileNameLabel').textContent = 'Upload CSV/Excel';
+    document.getElementById('dataScopeLabel').textContent = 'No File';
+    document.getElementById('dataLoadedRow').classList.add('hidden');
+    document.getElementById('triggerCol').classList.add('hidden');
+    document.getElementById('triggerCol').innerHTML = '<option value="">Select Trigger Column</option>';
+    document.getElementById('cardSelector').innerHTML = '';
+    columnList.innerHTML = ''; profileContainer.innerHTML = '';
+    fieldsContainer.innerHTML = ''; interactionLayer.innerHTML = '';
+    artLayer.style.backgroundImage = 'none';
+    document.getElementById('templateLayer').style.backgroundImage = 'none';
+});
 
+// ─────────────────────────────────────────────────────────────────────────────
 // DATA LOADING
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 async function processDataFile(file) {
-
     if (!file) return;
-
-    document.getElementById('fileNameLabel').textContent = file.name;
-
     const reader = new FileReader();
-
     reader.onload = (e) => {
-
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellHTML: false, cellRichText: true });
-
         const ws = wb.Sheets[wb.SheetNames[0]];
-
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
         data = json.filter(row => Object.values(row).join('').trim().length > 0);
-
         headers = Object.keys(json[0]);
 
+        document.getElementById('fileNameLabel').textContent = file.name;
         document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
-
-        // Try to extract rich text formatting from xlsx cells
+        document.getElementById('dataLoadedName').textContent = file.name;
+        document.getElementById('dataLoadedRow').classList.remove('hidden');
 
         richTextStore = {};
-
         const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-
-        for (let R = range.s.r + 1; R <= range.e.r; R++) {  // skip header row
-
+        for (let R = range.s.r + 1; R <= range.e.r; R++) {
             const cardIdx = R - range.s.r - 1;
-
             headers.forEach((h, C) => {
-
-                const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
-
-                const cell = ws[cellAddr];
-
+                const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
                 if (!cell) return;
-
                 const richHTML = extractXlsxRichText(cell);
-
-                if (richHTML && richHTML !== escapeHtml(String(cell.v || ''))) {
-
-                    setRichHTML(cardIdx, h, richHTML);
-
-                }
-
+                if (richHTML && richHTML !== escapeHtml(String(cell.v || ''))) setRichHTML(cardIdx, h, richHTML);
             });
-
         }
 
         triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
-
         headers.forEach(h => {
-
             const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
-
             triggerColSelect.appendChild(opt);
-
         });
-
         triggerColSelect.classList.remove('hidden');
 
         headers.forEach((h, i) => {
-
             if (h.toLowerCase().match(/art|image|template/)) return;
-
             if (!fieldConfigs[h]) fieldConfigs[h] = {
-
                 visible: true, top: 60 + i * 60, left: 25, width: 325, height: 45,
-
                 fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center'
-
             };
-
         });
 
-        populateSelector();
-
-        render();
-
+        populateSelector(); render();
     };
-
     reader.readAsArrayBuffer(file);
-
 }
 
 function populateSelector() {
-
     const sel = document.getElementById('cardSelector');
-
     sel.innerHTML = '';
-
     data.forEach((row, i) => {
-
-        const name = Object.values(row)[0] || `Card ${i+1}`;
-
         const opt = document.createElement('option');
-
-        opt.value = i; opt.textContent = `${i+1}: ${name}`;
-
+        opt.value = i; opt.textContent = `${i+1}: ${Object.values(row)[0] || 'Card ' + (i+1)}`;
         sel.appendChild(opt);
-
     });
-
 }
 
 function handleTemplates(files) {
-
     Array.from(files).forEach(file => {
-
         const reader = new FileReader();
-
         reader.onload = (ev) => {
-
             templateAssets[file.name] = ev.target.result;
-
             if (!globalTemplateName) globalTemplateName = file.name;
-
             updateTemplateLibrary();
-
         };
-
         reader.readAsDataURL(file);
-
     });
-
 }
 
 function updateTemplateLibrary() {
-
     const lib = document.getElementById('templateLibrary');
-
     lib.innerHTML = '';
-
     Object.keys(templateAssets).forEach(name => {
-
         const wrapper = document.createElement('div');
-
-        wrapper.className = `cursor-pointer rounded border-2 overflow-hidden ${globalTemplateName === name ? 'border-orange-500' : 'border-zinc-800'}`;
-
+        wrapper.className = `template-tile ${globalTemplateName === name ? 'selected' : ''}`;
         wrapper.onclick = () => { globalTemplateName = name; render(); updateTemplateLibrary(); };
 
-        wrapper.innerHTML = `<img src="${templateAssets[name]}" class="w-full aspect-[2.5/3.5] object-cover">`;
+        const img = document.createElement('img');
+        img.src = templateAssets[name];
+        img.className = 'w-full aspect-[2.5/3.5] object-cover';
 
+        const del = document.createElement('button');
+        del.className = 'template-tile-del'; del.textContent = '×';
+        del.title = 'Remove template';
+        del.onclick = (e) => {
+            e.stopPropagation();
+            delete templateAssets[name];
+            if (globalTemplateName === name) {
+                const remaining = Object.keys(templateAssets);
+                globalTemplateName = remaining.length ? remaining[0] : null;
+            }
+            updateTemplateLibrary(); render();
+        };
+
+        wrapper.appendChild(img); wrapper.appendChild(del);
         lib.appendChild(wrapper);
-
     });
-
     render();
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
 // EXPORT
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 async function captureCard() {
-
     closeInlineEditor(true);
-
+    // Temporarily turn off art edit mode visuals
+    const wasArtEdit = isArtEditMode;
+    if (wasArtEdit) { artLayer.classList.remove('art-edit-active'); artEditPanel.classList.add('hidden'); artEditPanel.classList.remove('flex'); }
     render(true);
-
     const card = document.getElementById('cardPreview');
-
     await new Promise(r => setTimeout(r, 120));
-
     const canvas = await html2canvas(card, {
-
         scale: 4, useCORS: true, allowTaint: true,
-
         backgroundColor: null, logging: false,
-
         foreignObjectRendering: false, imageTimeout: 15000,
-
     });
-
     render(false);
-
+    if (wasArtEdit) { artLayer.classList.add('art-edit-active'); artEditPanel.classList.remove('hidden'); artEditPanel.classList.add('flex'); }
     return canvas;
-
 }
 
 async function downloadCurrent() {
-
-    if (data.length === 0) return;
-
-    const originalMode = isEditMode; isEditMode = false;
-
+    if (!data.length) return;
+    const orig = isEditMode; isEditMode = false;
     const canvas = await captureCard();
-
     const link = document.createElement('a');
-
-    const name = Object.values(data[currentIndex])[0] || `card_${currentIndex}`;
-
-    link.download = `${name}.png`; link.href = canvas.toDataURL('image/png'); link.click();
-
-    isEditMode = originalMode; render();
-
+    link.download = `${Object.values(data[currentIndex])[0] || 'card_' + currentIndex}.png`;
+    link.href = canvas.toDataURL('image/png'); link.click();
+    isEditMode = orig; render();
 }
 
 async function exportAllCards() {
-
-    if (data.length === 0) return;
-
-    const originalIndex = currentIndex;
-
+    if (!data.length) return;
+    const origIdx = currentIndex;
+    const origEdit = isEditMode; isEditMode = false;
     const zip = new JSZip();
-
     document.getElementById('exportOverlay').style.display = 'flex';
-
     for (let i = 0; i < data.length; i++) {
-
         currentIndex = i;
-
         const canvas = await captureCard();
-
         const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-
-        const cardName = Object.values(data[i])[0] || `card_${i}`;
-
-        zip.file(`${i+1}_${cardName}.png`, blob);
-
+        zip.file(`${i+1}_${Object.values(data[i])[0] || 'card_' + i}.png`, blob);
         document.getElementById('exportProgress').textContent = `Processing ${i+1} / ${data.length}`;
-
     }
-
     const content = await zip.generateAsync({ type: 'blob' });
-
     const link = document.createElement('a');
-
     link.href = URL.createObjectURL(content); link.download = 'deck_export.zip'; link.click();
-
     document.getElementById('exportOverlay').style.display = 'none';
-
-    currentIndex = originalIndex; render();
-
+    currentIndex = origIdx; isEditMode = origEdit; render();
 }
 
-// ── Save / Load Project ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SAVE / LOAD PROJECT
+// ─────────────────────────────────────────────────────────────────────────────
+const PROJECT_VERSION = 6;
 
-const PROJECT_VERSION = 3;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-// Convert a base64 data URL to a JSZip-compatible Uint8Array
 function dataURLtoUint8Array(dataURL) {
-    const base64 = dataURL.split(',')[1];
-    const binary = atob(base64);
-    const arr = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
+    const b64 = dataURL.split(',')[1], bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return arr;
 }
-
-// Convert a mime type + filename to a safe slug for storing in the zip
-function safeName(name) {
-    return name.replace(/[^a-zA-Z0-9._-]/g, '_');
-}
-
-// Detect mime type from a data URL
-function mimeFromDataURL(dataURL) {
-    const m = dataURL.match(/^data:([^;]+);/);
-    return m ? m[1] : 'image/png';
-}
-
-// Mime type → file extension
+function safeName(n) { return n.replace(/[^a-zA-Z0-9._-]/g, '_'); }
+function mimeFromDataURL(d) { const m = d.match(/^data:([^;]+);/); return m ? m[1] : 'image/png'; }
 function extFromMime(mime) {
-    const map = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
-    return map[mime] || 'png';
+    return { 'image/png':'png','image/jpeg':'jpg','image/gif':'gif','image/webp':'webp','image/svg+xml':'svg' }[mime] || 'png';
 }
-
-// Read a zip entry as a base64 data URL
 async function zipEntryToDataURL(entry, mime) {
     const blob = await entry.async('blob');
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject;
-        // Force the correct mime type so the data URL is usable as an image src
-        reader.readAsDataURL(new Blob([blob], { type: mime }));
+    return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = rej;
+        r.readAsDataURL(new Blob([blob], { type: mime }));
     });
 }
-
 function flashMsg(text, color, duration = 2500) {
-    const flash = document.getElementById('projectSavedFlash');
-    flash.textContent = text;
-    flash.style.color = color;
-    flash.style.opacity = '1';
-    setTimeout(() => { flash.style.opacity = '0'; }, duration);
+    const f = document.getElementById('projectSavedFlash');
+    f.textContent = text; f.style.color = color; f.style.opacity = '1';
+    setTimeout(() => { f.style.opacity = '0'; }, duration);
 }
-
-// ── SAVE ───────────────────────────────────────────────────────────────────
 
 async function saveProject() {
     flashMsg('⏳ Saving…', '#f97316', 60000);
-    await new Promise(r => setTimeout(r, 60)); // yield so flash renders
-
+    await new Promise(r => setTimeout(r, 60));
     try {
         const zip = new JSZip();
+        const templateIndex = {}, iconIndex = {}, artIndex = {};
 
-        // ── 1. Metadata JSON (no images) ──────────────────────────────────
-        // templateAssets and iconLibrary images are stored as separate files;
-        // we only store keys/references here.
-        const templateIndex = {}; // originalName → filename in zip
-        const iconIndex     = {}; // icon.id → filename in zip
-
-        // ── 2. Template frames ────────────────────────────────────────────
-        const templatesFolder = zip.folder('templates');
-        for (const [name, dataURL] of Object.entries(templateAssets)) {
-            const mime = mimeFromDataURL(dataURL);
-            const ext  = extFromMime(mime);
-            const filename = safeName(name.replace(/\.[^.]+$/, '')) + '.' + ext;
-            templatesFolder.file(filename, dataURLtoUint8Array(dataURL));
-            templateIndex[name] = filename;
-            await new Promise(r => setTimeout(r, 0)); // yield per image
+        const tf = zip.folder('templates');
+        for (const [name, durl] of Object.entries(templateAssets)) {
+            const mime = mimeFromDataURL(durl), ext = extFromMime(mime);
+            const fn = safeName(name.replace(/\.[^.]+$/, '')) + '.' + ext;
+            tf.file(fn, dataURLtoUint8Array(durl)); templateIndex[name] = fn;
+            await new Promise(r => setTimeout(r, 0));
         }
-
-        // ── 3. Icons ──────────────────────────────────────────────────────
-        const iconsFolder = zip.folder('icons');
+        const icf = zip.folder('icons');
         for (const icon of iconLibrary) {
-            const mime = mimeFromDataURL(icon.src);
-            const ext  = extFromMime(mime);
-            const filename = safeName(icon.id) + '.' + ext;
-            iconsFolder.file(filename, dataURLtoUint8Array(icon.src));
-            iconIndex[icon.id] = { filename, token: icon.token, scale: icon.scale };
+            const mime = mimeFromDataURL(icon.src), ext = extFromMime(mime);
+            const fn = safeName(icon.id) + '.' + ext;
+            icf.file(fn, dataURLtoUint8Array(icon.src)); iconIndex[icon.id] = { fn, token: icon.token, scale: icon.scale };
+            await new Promise(r => setTimeout(r, 0));
+        }
+        const af = zip.folder('art');
+        for (const art of artLibrary) {
+            const mime = mimeFromDataURL(art.src), ext = extFromMime(mime);
+            const fn = safeName(art.id) + '.' + ext;
+            af.file(fn, dataURLtoUint8Array(art.src)); artIndex[art.id] = { fn, name: art.name, originalFilename: art.originalFilename };
             await new Promise(r => setTimeout(r, 0));
         }
 
-        // ── 4. project.json ───────────────────────────────────────────────
         const meta = {
-            version:              PROJECT_VERSION,
-            savedAt:              new Date().toISOString(),
-            data,
-            headers,
-            currentIndex,
-            fieldConfigs,
-            profileSettings,
-            profileStyleOverrides,
-            cardOverrides,
-            richTextStore,
-            globalTemplateName,
-            triggerColValue:      document.getElementById('triggerCol').value,
-            templateIndex,  // name → zip filename
-            iconIndex,       // id   → { filename, token, scale }
+            version: PROJECT_VERSION, savedAt: new Date().toISOString(),
+            data, headers, currentIndex, fieldConfigs,
+            profileSettings, profileStyleOverrides, cardOverrides, richTextStore,
+            globalTemplateName, triggerColValue: triggerColSelect.value,
+            templateIndex, iconIndex, artIndex, artAssignments, artTransforms,
         };
-
         zip.file('project.json', JSON.stringify(meta, null, 2));
 
-        // ── 5. Generate & download ─────────────────────────────────────────
         const content = await zip.generateAsync(
             { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
-            ({ percent }) => {
-                flashMsg(`⏳ Packing… ${Math.round(percent)}%`, '#f97316', 60000);
-            }
+            ({ percent }) => flashMsg(`⏳ Packing… ${Math.round(percent)}%`, '#f97316', 60000)
         );
-
-        const firstName = (data.length > 0 ? String(Object.values(data[0])[0]) : '')
-            .replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
-        const timestamp = new Date().toISOString().slice(0, 10);
-        const filename  = `${firstName || 'deck'}_${timestamp}.deckproject.zip`;
-
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(content);
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const firstName = (data.length ? String(Object.values(data[0])[0]) : '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
+        const fn = `${firstName || 'deck'}_${new Date().toISOString().slice(0,10)}.deckproject.zip`;
+        const a = document.createElement('a'); a.href = URL.createObjectURL(content); a.download = fn;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-
         flashMsg('✓ Project Saved', '#4ade80', 2500);
-
-    } catch (err) {
-        console.error('Save project error:', err);
-        flashMsg('✗ Save failed', '#ef4444', 5000);
-        alert('Save failed:\n' + err.message);
+    } catch(err) {
+        console.error(err); flashMsg('✗ Save failed', '#ef4444', 5000); alert('Save failed:\n' + err.message);
     }
 }
-
-// ── LOAD ───────────────────────────────────────────────────────────────────
 
 async function loadProject(file) {
     if (!file) return;
     flashMsg('⏳ Loading…', '#f97316', 60000);
     await new Promise(r => setTimeout(r, 60));
-
     try {
         const zip = await JSZip.loadAsync(file);
-
-        // ── 1. Parse project.json ─────────────────────────────────────────
         const metaFile = zip.file('project.json');
         if (!metaFile) throw new Error('Not a valid project ZIP — project.json missing.');
         const meta = JSON.parse(await metaFile.async('string'));
         if (!meta.version) throw new Error('Unrecognised project format.');
 
-        // ── 2. Reconstruct templateAssets ─────────────────────────────────
         const loadedTemplates = {};
         const tIndex = meta.templateIndex || {};
-        let done = 0, total = Object.keys(tIndex).length + (meta.iconIndex ? Object.keys(meta.iconIndex).length : 0);
+        let done = 0;
+        const total = Object.keys(tIndex).length + Object.keys(meta.iconIndex||{}).length + Object.keys(meta.artIndex||{}).length;
 
-        for (const [originalName, filename] of Object.entries(tIndex)) {
-            const entry = zip.file('templates/' + filename);
-            if (!entry) continue;
-            const ext  = filename.split('.').pop().toLowerCase();
-            const mime = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml' }[ext] || 'image/png';
-            loadedTemplates[originalName] = await zipEntryToDataURL(entry, mime);
-            done++;
-            flashMsg(`⏳ Loading images… ${done}/${total}`, '#f97316', 60000);
+        const mimeMap = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml' };
+
+        for (const [origName, fn] of Object.entries(tIndex)) {
+            const entry = zip.file('templates/' + fn); if (!entry) continue;
+            const mime = mimeMap[fn.split('.').pop().toLowerCase()] || 'image/png';
+            loadedTemplates[origName] = await zipEntryToDataURL(entry, mime);
+            flashMsg(`⏳ Loading… ${++done}/${total}`, '#f97316', 60000);
         }
-
-        // ── 3. Reconstruct iconLibrary ────────────────────────────────────
         const loadedIcons = [];
-        const iIndex = meta.iconIndex || {};
-
-        for (const [id, info] of Object.entries(iIndex)) {
-            const entry = zip.file('icons/' + info.filename);
-            if (!entry) continue;
-            const ext  = info.filename.split('.').pop().toLowerCase();
-            const mime = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', svg:'image/svg+xml' }[ext] || 'image/png';
-            const src  = await zipEntryToDataURL(entry, mime);
-            loadedIcons.push({ id, src, token: info.token, scale: info.scale ?? 1.0 });
-            done++;
-            flashMsg(`⏳ Loading images… ${done}/${total}`, '#f97316', 60000);
+        for (const [id, info] of Object.entries(meta.iconIndex||{})) {
+            const fn = info.fn || info.filename;
+            const entry = zip.file('icons/' + fn); if (!entry) continue;
+            const mime = mimeMap[fn.split('.').pop().toLowerCase()] || 'image/png';
+            loadedIcons.push({ id, src: await zipEntryToDataURL(entry, mime), token: info.token, scale: info.scale ?? 1.0 });
+            flashMsg(`⏳ Loading… ${++done}/${total}`, '#f97316', 60000);
+        }
+        const loadedArt = [];
+        for (const [id, info] of Object.entries(meta.artIndex||{})) {
+            const fn = info.fn || info.filename;
+            const entry = zip.file('art/' + fn); if (!entry) continue;
+            const mime = mimeMap[fn.split('.').pop().toLowerCase()] || 'image/png';
+            loadedArt.push({ id, src: await zipEntryToDataURL(entry, mime), name: info.name, originalFilename: info.originalFilename });
+            flashMsg(`⏳ Loading… ${++done}/${total}`, '#f97316', 60000);
         }
 
-        // ── 4. Restore all state ──────────────────────────────────────────
         data                  = meta.data                  || [];
         headers               = meta.headers               || [];
         currentIndex          = meta.currentIndex          || 0;
@@ -2567,49 +1783,70 @@ async function loadProject(file) {
         globalTemplateName    = meta.globalTemplateName    || null;
         templateAssets        = loadedTemplates;
         iconLibrary           = loadedIcons;
+        artLibrary            = loadedArt;
+        artAssignments        = meta.artAssignments        || {};
+        artTransforms         = meta.artTransforms         || {};
 
-        // ── 5. Rebuild UI ─────────────────────────────────────────────────
-        if (data.length > 0) {
+        if (data.length) {
             document.getElementById('fileNameLabel').textContent  = '(Loaded from project)';
+            document.getElementById('dataLoadedName').textContent = '(Loaded from project)';
+            document.getElementById('dataLoadedRow').classList.remove('hidden');
             document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
 
-            const sel = document.getElementById('triggerCol');
-            sel.innerHTML = '<option value="">(No Profile Logic)</option>';
+            triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
             headers.forEach(h => {
-                const opt = document.createElement('option');
-                opt.value = h; opt.textContent = h;
-                sel.appendChild(opt);
+                const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
+                triggerColSelect.appendChild(opt);
             });
-            if (meta.triggerColValue) sel.value = meta.triggerColValue;
-            sel.classList.remove('hidden');
+            if (meta.triggerColValue) triggerColSelect.value = meta.triggerColValue;
+            triggerColSelect.classList.remove('hidden');
 
             populateSelector();
             document.getElementById('cardSelector').value = currentIndex;
         }
 
-        updateTemplateLibrary();
-        renderIconLibrary();
-        render();
-
+        updateTemplateLibrary(); renderIconLibrary(); renderArtLibrary(); render();
+        if (isArtEditMode) syncArtSlider();
         flashMsg('✓ Project Loaded', '#60a5fa', 2500);
-
-    } catch (err) {
-        console.error('Load project error:', err);
-        flashMsg('✗ Load failed', '#ef4444', 5000);
-        alert('Could not load project:\n' + err.message);
+    } catch(err) {
+        console.error(err); flashMsg('✗ Load failed', '#ef4444', 5000); alert('Could not load project:\n' + err.message);
     }
 }
 
 document.getElementById('saveProjectBtn').onclick = saveProject;
 document.getElementById('loadProjectBtn').onclick  = () => document.getElementById('loadProjectInput').click();
-document.getElementById('loadProjectInput').onchange = (e) => {
-    loadProject(e.target.files[0]);
-    e.target.value = '';
-};
+document.getElementById('loadProjectInput').onchange = (e) => { loadProject(e.target.files[0]); e.target.value = ''; };
 
+// ── Art Library Panel ─────────────────────────────────────
+document.getElementById('browseArtBtn').addEventListener('click', () => {
+    document.getElementById('artLibraryPanel').style.display = 'block';
+    document.getElementById('artLibraryPanel').scrollTop = 0;
+    renderArtLibrary();
+});
+document.getElementById('closeArtPanelBtn').addEventListener('click', () => {
+    document.getElementById('artLibraryPanel').style.display = 'none';
+});
+
+// ── Instructions panel toggle ──────────────────────────────
+document.getElementById('instructionsToggleBtn').addEventListener('click', () => {
+    const panel = document.getElementById('instructionsPanel');
+    const btn   = document.getElementById('instructionsToggleBtn');
+    const open  = panel.style.display === 'block';
+    panel.style.display = open ? 'none' : 'block';
+    btn.classList.toggle('active', !open);
+    if (!open) panel.scrollTop = 0;
+});
+
+// Smooth scroll within the fixed instructions panel
+function ipScroll(id) {
+    const panel = document.getElementById('instructionsPanel');
+    const target = document.getElementById(id);
+    if (!panel || !target) return;
+    const panelTop = panel.getBoundingClientRect().top;
+    const targetTop = target.getBoundingClientRect().top;
+    panel.scrollBy({ top: targetTop - panelTop - 56, behavior: 'smooth' });
+}
 </script>
-
 </body>
-
 </html>
 
