@@ -280,6 +280,7 @@
 
     <div class="toc">
       <div class="toc-label">Jump to</div>
+      <span class="toc a" onclick="ipScroll('ih-sheet')">Spreadsheet Setup</span>
       <span class="toc a" onclick="ipScroll('ih-data')">Loading Your Data</span>
       <span class="toc a" onclick="ipScroll('ih-frames')">Frame Assets</span>
       <span class="toc a" onclick="ipScroll('ih-art')">Art Assets</span>
@@ -289,6 +290,19 @@
       <span class="toc a" onclick="ipScroll('ih-profiles')">Profile Logic</span>
       <span class="toc a" onclick="ipScroll('ih-export')">Exporting</span>
       <span class="toc a" onclick="ipScroll('ih-save')">Save &amp; Load</span>
+    </div>
+
+    <div class="sec" id="ih-sheet">
+      <h2>Spreadsheet Setup</h2>
+      <ul>
+        <li><strong>Format:</strong> Use CSV or Excel (.xlsx). The first row must be column headers — these become your card field names.</li>
+        <li><strong>One row = one card.</strong> Every row below the header will generate a card in the deck.</li>
+        <li><strong>Art column:</strong> Name a column <code>art</code>, <code>image</code>, or <code>artwork</code> and fill each cell with the filename of that card's art image (e.g. <code>dragon.png</code>). Deck Architect will match it to your uploaded art automatically.</li>
+        <li><strong>Icon tokens:</strong> Type <code>{tokenname}</code> anywhere in a cell to embed an inline icon. Upload your icons and assign token names in the Icon Library first.</li>
+        <li><strong>Card types / profiles:</strong> Add a column like <code>Type</code> (e.g. Spell, Creature, Item) to enable Profile Logic — different card types can then have their own frames and layouts automatically.</li>
+        <li><strong>Rich text (Excel only):</strong> Bold, italic, and underline formatting applied inside individual Excel cells is preserved when the file is uploaded.</li>
+        <li><strong>Column names matter:</strong> Keep them short and consistent — they appear as field labels throughout the tool and are used as keys for art and icon matching.</li>
+      </ul>
     </div>
 
     <div class="sec" id="ih-data">
@@ -1849,4 +1863,3 @@ function ipScroll(id) {
 </script>
 </body>
 </html>
-
