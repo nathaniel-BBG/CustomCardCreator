@@ -1866,9 +1866,16 @@ async function captureCard() {
             for (const tok of line) {
                 if (tok.type === 'img') {
                     if (tok._img) {
-                        // Align icon center to text midline (matches CSS vertical-align: middle)
-                        // Text midline ≈ baseline - (ascender / 2), where ascender ≈ fontSize * 0.7
-                        const iconTop = drawY - fontSize * 0.35 - tok.drawH / 2;
+                        // Check if this line has any text tokens
+                        const hasText = line.some(t => t.type === 'text' && t.text.trim());
+                        let iconTop;
+                        if (hasText) {
+                            // Inline with text: center on x-height midpoint (≈ baseline - 0.25em)
+                            iconTop = drawY - fontSize * 0.25 - tok.drawH / 2;
+                        } else {
+                            // Icon-only line: center within the field box vertically
+                            iconTop = y + (h_px - tok.drawH) / 2;
+                        }
                         ctx.drawImage(tok._img, drawX, iconTop, tok.drawW, tok.drawH);
                     }
                     drawX += tok.drawW;
