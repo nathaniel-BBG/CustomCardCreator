@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect v8</title>
+    <title>Card Architect v11</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -147,6 +147,7 @@
             position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000;
             display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px);
         }
+        /* export-nudge removed - was causing text shift/clip during PNG capture */
         .export-nudge { transform: translateY(-15px); }
 
         /* ── Art Asset Library ── */
@@ -568,9 +569,13 @@
         <div id="interactionLayer" class="interaction-layer"></div>
     </div>
 
-    <div class="flex items-center gap-4 mt-6">
-        <button id="downloadCurrentBtn" class="bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest border border-zinc-700 transition-all">Export Current</button>
-        <button id="exportAllBtn" class="bg-orange-600 hover:bg-orange-500 text-white px-10 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all">Export Full Deck</button>
+    <div class="flex items-center gap-3 mt-6 flex-wrap">
+        <button id="downloadCurrentBtn" class="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest border border-zinc-700 transition-all">Export Current</button>
+        <button id="exportAllBtn" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all">Export Full Deck</button>
+        <button id="exportWordBtn" class="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all" title="8-up print sheet — landscape letter, 2.49×3.47 per card">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="11" x2="12" y2="11"/></svg>
+            Print Sheet
+        </button>
     </div>
 
     <!-- Save / Load Project -->
@@ -1674,53 +1679,520 @@ function updateTemplateLibrary() {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Direct canvas renderer — no html2canvas dependency ────────────────────────
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload  = () => resolve(img);
+        img.onerror = () => reject(new Error('Image load failed: ' + src.slice(0, 80)));
+        img.crossOrigin = 'anonymous';
+        img.src = src;
+    });
+}
+
+// Parse inline HTML (bold/italic/underline + img icons) into draw segments
+function parseRichHTMLSegments(htmlStr) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = htmlStr;
+    const segs = [];
+    function walk(node, bold, italic, underline) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent) segs.push({ type: 'text', text: node.textContent, bold, italic, underline });
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'img') { segs.push({ type: 'img', src: node.src, width: node.style.width, height: node.style.height }); return; }
+        if (tag === 'br') { segs.push({ type: 'text', text: '\n', bold, italic, underline }); return; }
+        const newBold      = bold      || tag === 'b' || tag === 'strong';
+        const newItalic    = italic    || tag === 'i' || tag === 'em';
+        const newUnderline = underline || tag === 'u';
+        node.childNodes.forEach(c => walk(c, newBold, newItalic, newUnderline));
+    }
+    tmp.childNodes.forEach(c => walk(c, false, false, false));
+    return segs;
+}
+
 async function captureCard() {
     closeInlineEditor(true);
-    // Temporarily turn off art edit mode visuals
-    const wasArtEdit = isArtEditMode;
-    if (wasArtEdit) { artLayer.classList.remove('art-edit-active'); artEditPanel.classList.add('hidden'); artEditPanel.classList.remove('flex'); }
-    render(true);
-    const card = document.getElementById('cardPreview');
-    await new Promise(r => setTimeout(r, 120));
-    const canvas = await html2canvas(card, {
-        scale: 4, useCORS: true, allowTaint: true,
-        backgroundColor: null, logging: false,
-        foreignObjectRendering: false, imageTimeout: 15000,
-    });
-    render(false);
-    if (wasArtEdit) { artLayer.classList.add('art-edit-active'); artEditPanel.classList.remove('hidden'); artEditPanel.classList.add('flex'); }
+
+    const CARD_W = 375, CARD_H = 525, SCALE = 4;
+    const CW = CARD_W * SCALE, CH = CARD_H * SCALE;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = CW; canvas.height = CH;
+    const ctx = canvas.getContext('2d');
+
+    // Rounded rect clip (matches border-radius: 16px)
+    const R = 16 * SCALE;
+    ctx.beginPath();
+    ctx.moveTo(R, 0); ctx.lineTo(CW - R, 0);
+    ctx.arcTo(CW, 0, CW, R, R); ctx.lineTo(CW, CH - R);
+    ctx.arcTo(CW, CH, CW - R, CH, R); ctx.lineTo(R, CH);
+    ctx.arcTo(0, CH, 0, CH - R, R); ctx.lineTo(0, R);
+    ctx.arcTo(0, 0, R, 0, R); ctx.closePath();
+    ctx.clip();
+
+    // White card background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, CW, CH);
+
+    // ── Resolve card data ──────────────────────────────────────────────────
+    const savedIndex = currentIndex;
+    const row   = data[currentIndex];
+    const pVal  = triggerColSelect.value ? String(row?.[triggerColSelect.value] || '').trim() : '';
+
+    // ── Art layer ──────────────────────────────────────────────────────────
+    let artSrc = resolveArtSrc(currentIndex);
+    if (!artSrc) {
+        const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
+        const urlVal = artCol ? String(row[artCol] || '') : '';
+        if (urlVal.startsWith('http') || urlVal.startsWith('data:')) artSrc = urlVal;
+    }
+    if (artSrc) {
+        try {
+            const artImg = await loadImage(artSrc);
+            const artT   = getArtTransform(currentIndex);
+            const imgW   = Math.round(ART_BASE_W * artT.scale) * SCALE;
+            const imgH   = Math.round(ART_BASE_H * artT.scale) * SCALE;
+            const offX   = artT.offsetX * SCALE;
+            const offY   = artT.offsetY * SCALE;
+            ctx.drawImage(artImg, offX, offY, imgW, imgH);
+        } catch(e) { console.warn('Art load failed:', e.message); }
+    }
+
+    // ── Template layer ─────────────────────────────────────────────────────
+    let finalTemplateName = globalTemplateName;
+    if (pVal && profileSettings[pVal]?.frame) finalTemplateName = profileSettings[pVal].frame;
+    const templateSrc = templateAssets[finalTemplateName];
+    if (templateSrc) {
+        try {
+            const tImg = await loadImage(templateSrc);
+            ctx.drawImage(tImg, 0, 0, CW, CH);
+        } catch(e) { console.warn('Template load failed:', e.message); }
+    }
+
+    // ── Text / icon fields ─────────────────────────────────────────────────
+    for (const h of headers) {
+        if (h.toLowerCase().match(/art|image|template/)) continue;
+
+        // Visibility (use non-edit-mode logic)
+        const savedEditMode = isEditMode;
+        isEditMode = false;
+        const visible = getVisibilityByScope(h);
+        const conf    = getConfigByScope(h);
+        isEditMode = savedEditMode;
+        if (!visible) continue;
+
+        const richHTML  = injectIconsIntoRichHTML(getRichHTML(currentIndex, h));
+        const segments  = parseRichHTMLSegments(richHTML);
+        const alignment = conf.textAlign || 'center';
+        const fontSize  = (conf.fontSize || 14) * SCALE;
+        const fontWeight= conf.fontWeight || 400;
+        const color     = conf.color || '#000000';
+        const fontStyle = conf.fontStyle || 'normal';
+        const fontFamily= (conf.fontFamily || "'Atkinson Hyperlegible', sans-serif").replace(/'/g, '');
+        const textDecoration = conf.textDecoration || 'none';
+        const x = conf.left * SCALE, y = conf.top * SCALE;
+        const w = conf.width * SCALE, h_px = conf.height * SCALE;
+
+        // Load any icon images in segments
+        for (const seg of segments) {
+            if (seg.type === 'img' && !seg._img) {
+                try { seg._img = await loadImage(seg.src); } catch(e) { seg._img = null; }
+            }
+        }
+
+        // Measure and wrap text into lines
+        function setFont(seg) {
+            const b = (seg.bold || String(fontWeight) >= '700') ? 'bold' : fontWeight;
+            const i = seg.italic ? 'italic' : fontStyle;
+            ctx.font = `${i} ${b} ${fontSize}px ${fontFamily}`;
+        }
+
+        // Build lines: split by \n first, then word-wrap within width
+        const lineHeight = fontSize * 1.2;
+        const lines = []; // each line: array of {seg, text or img}
+
+        let currentLine = [];
+        let currentLineW = 0;
+
+        function pushLine() { lines.push(currentLine); currentLine = []; currentLineW = 0; }
+
+        for (const seg of segments) {
+            if (seg.type === 'img') {
+                // Parse em-based size
+                const emSize = parseFloat(seg.width) || 1.1;
+                const imgPx  = emSize * fontSize;
+                if (currentLineW + imgPx > w && currentLine.length > 0) pushLine();
+                currentLine.push({ ...seg, drawW: imgPx, drawH: imgPx });
+                currentLineW += imgPx;
+                continue;
+            }
+            // text segment — split on \n
+            const parts = seg.text.split('\n');
+            parts.forEach((part, pi) => {
+                if (pi > 0) pushLine();
+                if (!part) return;
+                setFont(seg);
+                // Word-wrap
+                const words = part.split(/(?<=\s)/); // split keeping spaces
+                for (const word of words) {
+                    const ww = ctx.measureText(word).width;
+                    if (currentLineW + ww > w && currentLine.length > 0) pushLine();
+                    currentLine.push({ type: 'text', text: word, bold: seg.bold, italic: seg.italic, underline: seg.underline, drawW: ww });
+                    currentLineW += ww;
+                }
+            });
+        }
+        if (currentLine.length > 0) pushLine();
+
+        // Vertical centering within the field box
+        const totalTextH = lines.length * lineHeight;
+        let drawY = y + (h_px - totalTextH) / 2 + fontSize * 0.85; // baseline
+
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x, y, w, h_px); ctx.clip(); // clip to field box
+
+        for (const line of lines) {
+            // Compute line width for alignment
+            let lineW = 0;
+            line.forEach(tok => { lineW += tok.drawW; });
+            let drawX;
+            if (alignment === 'right')  drawX = x + w - lineW;
+            else if (alignment === 'center') drawX = x + (w - lineW) / 2;
+            else drawX = x;
+
+            for (const tok of line) {
+                if (tok.type === 'img') {
+                    if (tok._img) {
+                        ctx.drawImage(tok._img, drawX, drawY - tok.drawH * 0.85, tok.drawW, tok.drawH);
+                    }
+                    drawX += tok.drawW;
+                    continue;
+                }
+                setFont(tok);
+                ctx.fillStyle = color;
+                ctx.fillText(tok.text, drawX, drawY);
+                if (tok.underline || textDecoration === 'underline') {
+                    const tw = ctx.measureText(tok.text).width;
+                    ctx.fillRect(drawX, drawY + 2, tw, Math.max(1, fontSize * 0.06));
+                }
+                drawX += tok.drawW;
+            }
+            drawY += lineHeight;
+        }
+        ctx.restore();
+    }
+
     return canvas;
 }
 
 async function downloadCurrent() {
-    if (!data.length) return;
-    const orig = isEditMode; isEditMode = false;
-    const canvas = await captureCard();
-    const link = document.createElement('a');
-    link.download = `${Object.values(data[currentIndex])[0] || 'card_' + currentIndex}.png`;
-    link.href = canvas.toDataURL('image/png'); link.click();
-    isEditMode = orig; render();
+    if (!data.length) { flashMsg('⚠ No data loaded', '#f97316', 3000); return; }
+    flashMsg('⏳ Capturing card…', '#f97316', 30000);
+    try {
+        const orig = isEditMode; isEditMode = false;
+        const canvas = await captureCard();
+        const link = document.createElement('a');
+        link.download = `${Object.values(data[currentIndex])[0] || 'card_' + currentIndex}.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        isEditMode = orig; render();
+        flashMsg('✓ PNG exported', '#4ade80', 2500);
+    } catch(err) {
+        console.error('Export error:', err);
+        flashMsg('✗ Export failed — check console', '#ef4444', 6000);
+    }
 }
 
 async function exportAllCards() {
-    if (!data.length) return;
-    const origIdx = currentIndex;
-    const origEdit = isEditMode; isEditMode = false;
-    const zip = new JSZip();
+    if (!data.length) { flashMsg('⚠ No data loaded', '#f97316', 3000); return; }
+    const origIdx  = currentIndex;
+    const origEdit = isEditMode;
+    isEditMode = false;
+    const overlay  = document.getElementById('exportOverlay');
+    const progress = document.getElementById('exportProgress');
+    overlay.style.display = 'flex';
+    try {
+        const zip = new JSZip();
+        for (let i = 0; i < data.length; i++) {
+            currentIndex = i;
+            progress.textContent = `Rendering ${i + 1} / ${data.length}`;
+            const canvas = await captureCard();
+            const blob   = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'));
+            const name   = String(Object.values(data[i])[0] || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48) || `card_${i}`;
+            zip.file(`${i + 1}_${name}.png`, blob);
+        }
+        progress.textContent = 'Packing ZIP…';
+        const content = await zip.generateAsync(
+            { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
+            ({ percent }) => { progress.textContent = `Packing… ${Math.round(percent)}%`; }
+        );
+        const link = document.createElement('a');
+        link.href     = URL.createObjectURL(content);
+        link.download = 'deck_export.zip';
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 3000);
+        flashMsg(`✓ Exported ${data.length} card${data.length !== 1 ? 's' : ''}`, '#4ade80', 3000);
+    } catch(err) {
+        console.error('Export all error:', err);
+        flashMsg('✗ Export failed — check console', '#ef4444', 6000);
+    } finally {
+        overlay.style.display = 'none';
+        currentIndex = origIdx;
+        isEditMode   = origEdit;
+        render();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT TO WORD — 8-up print sheet, no external library
+// Landscape US Letter, 0.25" margins, 4 cols × 2 rows, card = 2.49" × 3.47"
+// .docx is just a ZIP of XML — we build it with the JSZip already on the page.
+// ─────────────────────────────────────────────────────────────────────────────
+async function exportToWord() {
+    if (!data.length) { alert('No cards to export — load a data file first.'); return; }
+
+    const origIdx  = currentIndex;
+    const origEdit = isEditMode;
+    isEditMode = false;
     document.getElementById('exportOverlay').style.display = 'flex';
+
+    // 1 ── Render every card to a base64 PNG
+    const pngB64s = [];
     for (let i = 0; i < data.length; i++) {
         currentIndex = i;
         const canvas = await captureCard();
-        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-        zip.file(`${i+1}_${Object.values(data[i])[0] || 'card_' + i}.png`, blob);
-        document.getElementById('exportProgress').textContent = `Processing ${i+1} / ${data.length}`;
+        // strip the "data:image/png;base64," prefix
+        pngB64s.push(canvas.toDataURL('image/png').split(',')[1]);
+        document.getElementById('exportProgress').textContent = `Rendering ${i + 1} / ${data.length}`;
     }
-    const content = await zip.generateAsync({ type: 'blob' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(content); link.download = 'deck_export.zip'; link.click();
-    document.getElementById('exportOverlay').style.display = 'none';
-    currentIndex = origIdx; isEditMode = origEdit; render();
+    currentIndex = origIdx;
+    isEditMode   = origEdit;
+    render();
+
+    document.getElementById('exportProgress').textContent = 'Building Word document…';
+
+    try {
+        // ── Dimensions (DXA = twentieths of a point; 1 inch = 1440 DXA) ──────
+        // Landscape letter: Word uses pgSz w/h in portrait then applies orient="landscape"
+        // w=15840 (11"), h=12240 (8.5") with orient landscape
+        const PAGE_W   = 15840;   // 11"
+        const PAGE_H   = 12240;   // 8.5"
+        const MARGIN   = 360;     // 0.25"
+        // Card: 2.49" × 3.47"
+        const CARD_W   = Math.round(2.49 * 1440);  // 3586 DXA
+        const CARD_H   = Math.round(3.47 * 1440);  // 4997 DXA
+        // EMU (English Metric Units): 1 inch = 914400 EMU
+        const CARD_W_EMU = Math.round(2.49 * 914400);  // 2276856
+        const CARD_H_EMU = Math.round(3.47 * 914400);  // 3172968
+
+        // ── Helper: one <w:tc> cell containing a card image ──────────────────
+        function makeCell(rId) {
+            const imgXml = rId ? `
+            <w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="0" w:after="0"/></w:pPr>
+              <w:r><w:drawing>
+                <wp:inline distT="0" distB="0" distL="0" distR="0">
+                  <wp:extent cx="${CARD_W_EMU}" cy="${CARD_H_EMU}"/>
+                  <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                  <wp:docPr id="1" name="card"/>
+                  <wp:cNvGraphicFramePr/>
+                  <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                    <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                      <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                        <pic:nvPicPr>
+                          <pic:cNvPr id="0" name="card"/>
+                          <pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr>
+                        </pic:nvPicPr>
+                        <pic:blipFill>
+                          <a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                          <a:stretch><a:fillRect/></a:stretch>
+                        </pic:blipFill>
+                        <pic:spPr>
+                          <a:xfrm><a:off x="0" y="0"/><a:ext cx="${CARD_W_EMU}" cy="${CARD_H_EMU}"/></a:xfrm>
+                          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                        </pic:spPr>
+                      </pic:pic>
+                    </a:graphicData>
+                  </a:graphic>
+                </wp:inline>
+              </w:drawing></w:r>
+            </w:p>` : `<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>`;
+
+            return `<w:tc>
+              <w:tcPr>
+                <w:tcW w:w="${CARD_W}" w:type="dxa"/>
+                <w:tcBorders>
+                  <w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+                  <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+                  <w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+                  <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+                </w:tcBorders>
+                <w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tcMar>
+                <w:vAlign w:val="center"/>
+              </w:tcPr>
+              ${imgXml}
+            </w:tc>`;
+        }
+
+        // ── Build pages (8 cards each) ────────────────────────────────────────
+        const COLS = 4, ROWS = 2, PER_PAGE = COLS * ROWS;
+        const totalPages = Math.ceil(pngB64s.length / PER_PAGE);
+
+        // We'll collect all image relationships and media files across all pages.
+        // Each card image gets a unique rId.
+        const mediaFiles  = {};  // filename → base64 string
+        const allRels     = [];  // { rId, filename }
+        let   imgCounter  = 1;
+
+        // Pre-assign rIds for every card
+        const cardRIds = pngB64s.map((b64) => {
+            const rId  = `rId${imgCounter}`;
+            const fn   = `image${imgCounter}.png`;
+            mediaFiles[fn] = b64;
+            allRels.push({ rId, fn });
+            imgCounter++;
+            return rId;
+        });
+
+        // Build body XML — one table per page, separated by page breaks
+        let bodyXml = '';
+        for (let page = 0; page < totalPages; page++) {
+            const start = page * PER_PAGE;
+
+            // Build 2 rows × 4 cols table
+            let tableRows = '';
+            for (let row = 0; row < ROWS; row++) {
+                let cells = '';
+                for (let col = 0; col < COLS; col++) {
+                    const idx = start + row * COLS + col;
+                    const rId = idx < cardRIds.length ? cardRIds[idx] : null;
+                    cells += makeCell(rId);
+                }
+                tableRows += `<w:tr>
+                  <w:trPr><w:trHeight w:val="${CARD_H}" w:hRule="exact"/></w:trPr>
+                  ${cells}
+                </w:tr>`;
+            }
+
+            // Vertical centering: usable height = PAGE_H - 2×MARGIN = 11520 DXA
+            // 2 rows of cards = CARD_H * ROWS = 9994 DXA
+            // Top spacer = (11520 - CARD_H * ROWS) / 2
+            const topSpacer = Math.round((PAGE_H - MARGIN * 2 - CARD_H * ROWS) / 2);
+            const spacerPara = `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${topSpacer}" w:lineRule="exact"/></w:pPr></w:p>`;
+
+            const tableXml = `
+            <w:tbl>
+              <w:tblPr>
+                <w:tblW w:w="${CARD_W * COLS}" w:type="dxa"/>
+                <w:jc w:val="center"/>
+                <w:tblBorders>
+                  <w:top w:val="none" w:sz="0"/><w:left w:val="none" w:sz="0"/>
+                  <w:bottom w:val="none" w:sz="0"/><w:right w:val="none" w:sz="0"/>
+                  <w:insideH w:val="none" w:sz="0"/><w:insideV w:val="none" w:sz="0"/>
+                </w:tblBorders>
+                <w:tblCellMar>
+                  <w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/>
+                  <w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/>
+                </w:tblCellMar>
+              </w:tblPr>
+              <w:tblGrid>
+                ${Array(COLS).fill(`<w:gridCol w:w="${CARD_W}"/>`).join('')}
+              </w:tblGrid>
+              ${tableRows}
+            </w:tbl>`;
+
+            bodyXml += spacerPara + tableXml;
+
+            // Page break between pages (not after the last one)
+            if (page < totalPages - 1) {
+                bodyXml += `<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>`;
+            }
+        }
+
+        // ── document.xml ─────────────────────────────────────────────────────
+        const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document
+  xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+  xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+  xmlns:v="urn:schemas-microsoft-com:vml"
+  xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
+  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+  xmlns:w10="urn:schemas-microsoft-com:office:word"
+  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+  xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"
+  xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk"
+  xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"
+  xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+  mc:Ignorable="w14 wp14">
+  <w:body>
+    ${bodyXml}
+    <w:sectPr>
+      <w:pgSz w:w="${PAGE_W}" w:h="${PAGE_H}" w:orient="landscape"/>
+      <w:pgMar w:top="${MARGIN}" w:right="${MARGIN}" w:bottom="${MARGIN}" w:left="${MARGIN}" w:header="0" w:footer="0" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+        // ── word/_rels/document.xml.rels ──────────────────────────────────────
+        const imageRelsXml = allRels.map(({ rId, fn }) =>
+            `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${fn}"/>`
+        ).join('\n  ');
+
+        const documentRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${imageRelsXml}
+</Relationships>`;
+
+        // ── [Content_Types].xml ───────────────────────────────────────────────
+        const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml"  ContentType="application/xml"/>
+  <Default Extension="png"  ContentType="image/png"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+        // ── _rels/.rels ───────────────────────────────────────────────────────
+        const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+        // ── Pack into ZIP ─────────────────────────────────────────────────────
+        document.getElementById('exportProgress').textContent = 'Packing…';
+        const zip = new JSZip();
+        zip.file('[Content_Types].xml', contentTypesXml);
+        zip.file('_rels/.rels', rootRelsXml);
+        zip.file('word/document.xml', documentXml);
+        zip.file('word/_rels/document.xml.rels', documentRelsXml);
+        for (const [fn, b64] of Object.entries(mediaFiles)) {
+            zip.file(`word/media/${fn}`, b64, { base64: true });
+        }
+
+        const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const stem = (data.length ? String(Object.values(data[0])[0]) : '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
+        a.download = `${stem || 'deck'}_print_sheet.docx`;
+        a.href = url;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        flashMsg('✓ Print sheet downloaded', '#60a5fa', 3000);
+    } catch (err) {
+        console.error(err);
+        alert('Word export failed:\n' + err.message);
+    } finally {
+        document.getElementById('exportOverlay').style.display = 'none';
+    }
 }
+
+document.getElementById('exportWordBtn').onclick = exportToWord;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SAVE / LOAD PROJECT
