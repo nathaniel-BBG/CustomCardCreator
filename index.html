@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect v13</title>
+    <title>Card Architect v14</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1795,6 +1795,10 @@ async function captureCard() {
         const textDecoration = conf.textDecoration || 'none';
         const x = conf.left * SCALE, y = conf.top * SCALE;
         const w = conf.width * SCALE, h_px = conf.height * SCALE;
+        // Match CSS: .dynamic-field { padding: 2px 4px; box-sizing: border-box }
+        const PAD_X = 4 * SCALE, PAD_Y = 2 * SCALE;
+        const innerX = x + PAD_X, innerW = w - PAD_X * 2;
+        const innerY = y + PAD_Y, innerH = h_px - PAD_Y * 2;
 
         // Load any icon images in segments
         for (const seg of segments) {
@@ -1824,7 +1828,7 @@ async function captureCard() {
                 // Parse em-based size
                 const emSize = parseFloat(seg.width) || 1.1;
                 const imgPx  = emSize * fontSize;
-                if (currentLineW + imgPx > w && currentLine.length > 0) pushLine();
+                if (currentLineW + imgPx > innerW && currentLine.length > 0) pushLine();
                 currentLine.push({ ...seg, drawW: imgPx, drawH: imgPx });
                 currentLineW += imgPx;
                 continue;
@@ -1839,7 +1843,7 @@ async function captureCard() {
                 const words = part.split(/(?<=\s)/); // split keeping spaces
                 for (const word of words) {
                     const ww = ctx.measureText(word).width;
-                    if (currentLineW + ww > w && currentLine.length > 0) pushLine();
+                    if (currentLineW + ww > innerW && currentLine.length > 0) pushLine();
                     currentLine.push({ type: 'text', text: word, bold: seg.bold, italic: seg.italic, underline: seg.underline, drawW: ww });
                     currentLineW += ww;
                 }
@@ -1847,21 +1851,21 @@ async function captureCard() {
         }
         if (currentLine.length > 0) pushLine();
 
-        // Vertical centering within the field box
+        // Vertical centering within the inner (padded) field box
         const totalTextH = lines.length * lineHeight;
-        let drawY = y + (h_px - totalTextH) / 2 + fontSize * 0.85; // baseline
+        let drawY = innerY + (innerH - totalTextH) / 2 + fontSize * 0.85; // baseline
 
         ctx.save();
-        ctx.beginPath(); ctx.rect(x, y, w, h_px); ctx.clip(); // clip to field box
+        ctx.beginPath(); ctx.rect(x, y, w, h_px); ctx.clip(); // clip to outer field box
 
         for (const line of lines) {
             // Compute line width for alignment
             let lineW = 0;
             line.forEach(tok => { lineW += tok.drawW; });
             let drawX;
-            if (alignment === 'right')  drawX = x + w - lineW;
-            else if (alignment === 'center') drawX = x + (w - lineW) / 2;
-            else drawX = x;
+            if (alignment === 'right')  drawX = innerX + innerW - lineW;
+            else if (alignment === 'center') drawX = innerX + (innerW - lineW) / 2;
+            else drawX = innerX;
 
             for (const tok of line) {
                 if (tok.type === 'img') {
@@ -1873,8 +1877,8 @@ async function captureCard() {
                             // Inline with text: center on x-height midpoint (≈ baseline - 0.25em)
                             iconTop = drawY - fontSize * 0.25 - tok.drawH / 2;
                         } else {
-                            // Icon-only line: center within the field box vertically
-                            iconTop = y + (h_px - tok.drawH) / 2;
+                            // Icon-only line: center within the inner (padded) field box vertically
+                            iconTop = innerY + (innerH - tok.drawH) / 2;
                         }
                         ctx.drawImage(tok._img, drawX, iconTop, tok.drawW, tok.drawH);
                     }
