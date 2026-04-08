@@ -511,6 +511,7 @@
             <div class="flex gap-0.5 shrink-0">
                 <button id="btnBold"   class="toolbar-btn w-6 h-6">B</button>
                 <button id="btnItalic" class="toolbar-btn w-6 h-6 italic font-serif">I</button>
+                <button id="btnUnderline" class="toolbar-btn w-6 h-6 underline">U</button>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
                 <input type="range" id="fontSizeSlider" min="8" max="100" value="16" class="w-14 accent-orange-500">
@@ -1141,7 +1142,7 @@ function openInlineEditor(header) {
     const ed = document.createElement('div');
     ed.contentEditable = 'true'; ed.spellcheck = false; ed.dataset.header = header;
     ed.className = `inline-editor align-${alignment}`;
-    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};`;
+    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};`;
     ed.innerHTML = getRichHTML(currentIndex, header);
     ed.addEventListener('input', () => { commitEditorToStore(); positionMiniBar(); });
     ed.addEventListener('keydown', handleEditorKeydown);
@@ -1276,7 +1277,7 @@ function render(forExport = false) {
         div.className = `dynamic-field align-${alignment}`;
         div.dataset.field = h;
         if (forExport) div.classList.add('export-nudge');
-        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};`;
+        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};`;
         const span = document.createElement('span');
         span.className = 'field-rich-content'; span.innerHTML = richHTML;
         div.appendChild(span); fieldsContainer.appendChild(div);
@@ -1404,6 +1405,7 @@ function updateToolbarUI() {
         document.getElementById('fontColorPicker').value = conf.color;
         updateAlignButtons(conf.textAlign || 'center');
         document.getElementById('fontFamilySelect').value = conf.fontFamily || "'Atkinson Hyperlegible', sans-serif";
+        document.getElementById('btnUnderline').classList.toggle('active', conf.textDecoration === 'underline');
     } else { sc.classList.add('hidden'); }
     const hint = document.getElementById('modeHint');
     if (hint) {
@@ -1500,6 +1502,7 @@ document.getElementById('fontSizeSlider').oninput = (e) => { document.getElement
 document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
 document.getElementById('btnBold').onclick   = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontWeight', c.fontWeight === 700 ? 400 : 700); };
 document.getElementById('btnItalic').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontStyle', c.fontStyle === 'italic' ? 'normal' : 'italic'); };
+document.getElementById('btnUnderline').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('textDecoration', c.textDecoration === 'underline' ? 'none' : 'underline'); };
 document.getElementById('fontFamilySelect').onchange = (e) => saveStyleChange('fontFamily', e.target.value);
 
 // ─────────────────────────────────────────────────────────────────────────────
