@@ -1516,7 +1516,7 @@ document.getElementById('fontFamilySelect').onchange = (e) => saveStyleChange('f
 document.getElementById('dropZoneData').onclick      = () => document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange        = (e) => processDataFile(e.target.files[0]);
 document.getElementById('dropZoneTemplates').onclick = () => document.getElementById('templateFiles').click();
-document.getElementById('templateFiles').onchange    = (e) => handleTemplates(e.target.files);
+document.getElementById('templateFiles').onchange    = (e) => { handleTemplates(e.target.files); e.target.value = ''; };
 document.getElementById('prevBtn').onclick           = () => { if (currentIndex > 0) { currentIndex--; render(); if (isArtEditMode) syncArtSlider(); } };
 document.getElementById('nextBtn').onclick           = () => { if (currentIndex < data.length - 1) { currentIndex++; render(); if (isArtEditMode) syncArtSlider(); } };
 document.getElementById('cardSelector').onchange     = (e) => { currentIndex = parseInt(e.target.value); render(); if (isArtEditMode) syncArtSlider(); };
