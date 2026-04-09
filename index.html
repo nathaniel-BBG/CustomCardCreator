@@ -480,10 +480,14 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-zinc-800 self-center"></span>
                 <button id="toggleEditBtn" class="header-toggle-btn self-center">Edit Layout</button>
                 <button id="artEditToggleBtn" class="header-toggle-btn self-center">Edit Art</button>
-                <button id="instructionsToggleBtn" class="header-toggle-btn self-center" style="display:flex;align-items:center;gap:5px;">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    Instructions
+                <span class="w-px h-5 bg-zinc-800 self-center"></span>
+                <button id="undoBtn" title="Undo (Ctrl+Z)" class="header-toggle-btn self-center w-8 h-8 disabled:cursor-not-allowed" style="opacity:0.3;" disabled>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>
                 </button>
+                <button id="redoBtn" title="Redo (Ctrl+Y)" class="header-toggle-btn self-center w-8 h-8 disabled:cursor-not-allowed" style="opacity:0.3;" disabled>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 014-4h12"/></svg>
+                </button>
+
             </div>
         </div>
     </div>
@@ -596,6 +600,14 @@
 
 <aside class="sidebar flex flex-col">
     <div class="p-6 space-y-10 flex-1 overflow-y-auto custom-scrollbar">
+
+        <!-- Instructions + quick nav -->
+        <div class="flex items-center justify-between">
+            <button id="instructionsToggleBtn" class="header-toggle-btn" style="display:flex;align-items:center;gap:6px;width:100%;justify-content:center;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Instructions
+            </button>
+        </div>
 
         <!-- Database -->
         <section>
@@ -728,6 +740,79 @@ const ART_BASE_H = 525;
 // Art pan drag
 let artPanDrag = null;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// UNDO / REDO HISTORY
+// ─────────────────────────────────────────────────────────────────────────────
+const HISTORY_MAX = 50;
+let historyStack = [];   // array of snapshot objects
+let historyIndex = -1;   // points to current position
+let _suppressSnapshot = false;
+
+function captureSnapshot() {
+    return {
+        fieldConfigs:          JSON.parse(JSON.stringify(fieldConfigs)),
+        profileSettings:       JSON.parse(JSON.stringify(profileSettings)),
+        profileStyleOverrides: JSON.parse(JSON.stringify(profileStyleOverrides)),
+        cardOverrides:         JSON.parse(JSON.stringify(cardOverrides)),
+        richTextStore:         JSON.parse(JSON.stringify(richTextStore)),
+        globalTemplateName,
+        artAssignments:        JSON.parse(JSON.stringify(artAssignments)),
+        artTransforms:         JSON.parse(JSON.stringify(artTransforms)),
+    };
+}
+
+function saveSnapshot() {
+    if (_suppressSnapshot) return;
+    const snap = captureSnapshot();
+    // Drop any redo future
+    historyStack = historyStack.slice(0, historyIndex + 1);
+    historyStack.push(snap);
+    if (historyStack.length > HISTORY_MAX) historyStack.shift();
+    historyIndex = historyStack.length - 1;
+    refreshUndoRedoBtns();
+}
+
+function applySnapshot(snap) {
+    _suppressSnapshot = true;
+    fieldConfigs          = JSON.parse(JSON.stringify(snap.fieldConfigs));
+    profileSettings       = JSON.parse(JSON.stringify(snap.profileSettings));
+    profileStyleOverrides = JSON.parse(JSON.stringify(snap.profileStyleOverrides));
+    cardOverrides         = JSON.parse(JSON.stringify(snap.cardOverrides));
+    richTextStore         = JSON.parse(JSON.stringify(snap.richTextStore));
+    globalTemplateName    = snap.globalTemplateName;
+    artAssignments        = JSON.parse(JSON.stringify(snap.artAssignments));
+    artTransforms         = JSON.parse(JSON.stringify(snap.artTransforms));
+    _suppressSnapshot = false;
+    closeInlineEditor(false);
+    render();
+    updateColumnUI();
+    renderArtLibrary();
+    if (isArtEditMode) syncArtSlider();
+    refreshUndoRedoBtns();
+}
+
+function undo() {
+    if (historyIndex <= 0) return;
+    historyIndex--;
+    applySnapshot(historyStack[historyIndex]);
+}
+
+function redo() {
+    if (historyIndex >= historyStack.length - 1) return;
+    historyIndex++;
+    applySnapshot(historyStack[historyIndex]);
+}
+
+function refreshUndoRedoBtns() {
+    const u = document.getElementById('undoBtn');
+    const r = document.getElementById('redoBtn');
+    if (!u || !r) return;
+    u.disabled = historyIndex <= 0;
+    r.disabled = historyIndex >= historyStack.length - 1;
+    u.style.opacity = u.disabled ? '0.3' : '1';
+    r.style.opacity = r.disabled ? '0.3' : '1';
+}
+
 function defaultArtTransform() { return { scale: 1.0, offsetX: 0, offsetY: 0 }; }
 function getArtTransform(idx) {
     if (!artTransforms[idx]) artTransforms[idx] = defaultArtTransform();
@@ -784,11 +869,13 @@ artScaleSlider.addEventListener('input', () => {
     artScaleDisplay.textContent = artScaleSlider.value + '%';
     render();
 });
+artScaleSlider.addEventListener('change', () => saveSnapshot());
 
 document.getElementById('artResetBtn').addEventListener('click', () => {
     artTransforms[currentIndex] = defaultArtTransform();
     syncArtSlider();
     render();
+    saveSnapshot();
 });
 
 // Art pan via direct drag on artLayer (only in art edit mode)
@@ -810,7 +897,7 @@ artLayer.addEventListener('pointermove', (e) => {
     if (isArtEditMode) syncArtSlider();
 });
 
-artLayer.addEventListener('pointerup', () => { artPanDrag = null; });
+artLayer.addEventListener('pointerup', () => { if (artPanDrag) { artPanDrag = null; saveSnapshot(); } else { artPanDrag = null; } });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ART HELPERS
@@ -875,7 +962,7 @@ function renderArtLibrary() {
             if (e.target.matches('input') || e.target.matches('button')) return;
             if (artAssignments[currentIndex] === art.id) delete artAssignments[currentIndex];
             else artAssignments[currentIndex] = art.id;
-            renderArtLibrary(); render();
+            renderArtLibrary(); render(); saveSnapshot();
         });
 
         entry.querySelector('.art-name-input').addEventListener('input', (e) => {
@@ -1138,6 +1225,7 @@ function commitEditorToStore() {
         (display.querySelector('.field-rich-content') || display).innerHTML = injectIconsIntoRichHTML(clean);
     }
     updateColumnUI();
+    saveSnapshot();
 }
 
 function openInlineEditor(header) {
@@ -1346,9 +1434,9 @@ function updateProfileUI() {
                 }).join('')}
             </div>`;
 
-        card.querySelector('.profile-frame-select').onchange = (e) => { profileSettings[val].frame = e.target.value; render(); };
+        card.querySelector('.profile-frame-select').onchange = (e) => { profileSettings[val].frame = e.target.value; render(); saveSnapshot(); };
         card.querySelectorAll('.profile-field-toggle').forEach(chk => {
-            chk.onchange = (e) => { profileSettings[val].fields[e.target.getAttribute('data-header')] = e.target.checked; render(); };
+            chk.onchange = (e) => { profileSettings[val].fields[e.target.getAttribute('data-header')] = e.target.checked; render(); saveSnapshot(); };
         });
         profileContainer.appendChild(card);
     });
@@ -1391,7 +1479,7 @@ function updateColumnUI() {
             } else {
                 fieldConfigs[h].visible = newVal;
             }
-            render();
+            render(); saveSnapshot();
         };
         columnList.appendChild(item);
     });
@@ -1419,7 +1507,7 @@ function updateToolbarUI() {
     }
     updateScopeText();
 }
-function saveAlignChange(a) { saveStyleChange('textAlign', a); updateAlignButtons(a); }
+function saveAlignChange(a) { saveStyleChange('textAlign', a); updateAlignButtons(a); saveSnapshot(); }
 function updateAlignButtons(a) {
     document.getElementById('btnAlignLeft').classList.toggle('active',   a === 'left');
     document.getElementById('btnAlignCenter').classList.toggle('active', a === 'center');
@@ -1481,7 +1569,7 @@ interactionLayer.addEventListener('pointermove', (e) => {
 });
 
 interactionLayer.addEventListener('pointerup', (e) => {
-    if (dragInfo.active) { dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); }
+    if (dragInfo.active) { dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); saveSnapshot(); }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1504,11 +1592,13 @@ function saveStyleChange(key, value) {
 }
 
 document.getElementById('fontSizeSlider').oninput = (e) => { document.getElementById('fontSizeDisplay').textContent = e.target.value; saveStyleChange('fontSize', parseInt(e.target.value)); };
+document.getElementById('fontSizeSlider').onchange = () => saveSnapshot();
 document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
-document.getElementById('btnBold').onclick   = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontWeight', c.fontWeight === 700 ? 400 : 700); };
-document.getElementById('btnItalic').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontStyle', c.fontStyle === 'italic' ? 'normal' : 'italic'); };
-document.getElementById('btnUnderline').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('textDecoration', c.textDecoration === 'underline' ? 'none' : 'underline'); };
-document.getElementById('fontFamilySelect').onchange = (e) => saveStyleChange('fontFamily', e.target.value);
+document.getElementById('fontColorPicker').onchange = () => saveSnapshot();
+document.getElementById('btnBold').onclick   = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontWeight', c.fontWeight === 700 ? 400 : 700); saveSnapshot(); };
+document.getElementById('btnItalic').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontStyle', c.fontStyle === 'italic' ? 'normal' : 'italic'); saveSnapshot(); };
+document.getElementById('btnUnderline').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('textDecoration', c.textDecoration === 'underline' ? 'none' : 'underline'); saveSnapshot(); };
+document.getElementById('fontFamilySelect').onchange = (e) => { saveStyleChange('fontFamily', e.target.value); saveSnapshot(); };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EVENT WIRING
@@ -2407,6 +2497,29 @@ function ipScroll(id) {
     const targetTop = target.getBoundingClientRect().top;
     panel.scrollBy({ top: targetTop - panelTop - 56, behavior: 'smooth' });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNDO / REDO BUTTON WIRING + KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('redoBtn').addEventListener('click', redo);
+
+document.addEventListener('keydown', (e) => {
+    // Don't fire while typing in an inline editor or any input/select
+    if (activeEditor) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault(); undo();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+        e.preventDefault(); redo();
+    }
+});
+
+// Seed the initial empty snapshot so undo never goes below a clean state
+saveSnapshot();
 </script>
 </body>
 </html>
