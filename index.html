@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect v16</title>
+    <title>Card Architect v19</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -219,6 +219,9 @@
             opacity: 0; transition: opacity 0.15s; z-index: 10;
         }
         .template-tile:hover .template-tile-del { opacity: 1; }
+
+        #savingScopeSelect option:disabled { color: #52525b; font-style: italic; }
+        #savingScopeSelect option:not(:disabled) { color: #f97316; }
 
         .badge-rich { font-size: 7px; font-weight: 900; background: rgba(168,85,247,0.15); color: #a855f7; padding: 1px 5px; border-radius: 4px; }
         .badge-edited { font-size: 7px; font-weight: 900; background: rgba(249,115,22,0.12); color: #f97316; padding: 1px 5px; border-radius: 4px; }
@@ -474,7 +477,7 @@
                     <span id="activeProfileDisplay" class="text-[11px] font-black text-orange-500 uppercase tracking-widest">Global Context</span>
                     <div class="text-[11px] font-black text-zinc-500 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
                         Scope: <span class="text-white" id="currentScopeText">Global</span>
-                        <button id="clearScopeBtn" class="hidden text-[8px] font-black text-zinc-500 hover:text-red-400 uppercase tracking-widest border border-zinc-700 hover:border-red-500 rounded px-1 py-0.5 transition-colors leading-none">✕ reset</button>
+                        <button id="clearScopeBtn" class="text-[8px] font-black text-zinc-500 hover:text-red-400 uppercase tracking-widest border border-zinc-700 hover:border-red-500 rounded px-1 py-0.5 transition-colors leading-none disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-zinc-500 disabled:hover:border-zinc-700" disabled>↺ reset</button>
                     </div>
                 </div>
                 <span class="w-1.5 h-1.5 rounded-full bg-zinc-800 self-center"></span>
@@ -1312,18 +1315,79 @@ function updateScopeText() {
     const clearBtn = document.getElementById('clearScopeBtn');
     if (isEditMode) {
         currentScopeText.textContent = scopeSelect.value.charAt(0).toUpperCase() + scopeSelect.value.slice(1);
-        clearBtn.classList.add('hidden'); return;
+        // In edit mode, enable reset only if the effective scope has something to clear
+        const effectiveScope = getCardEffectiveScope();
+        clearBtn.disabled = (effectiveScope === 'global');
+        return;
     }
     const pVal = getProfileVal();
     if (cardOverrides[currentIndex] && Object.keys(cardOverrides[currentIndex]).length > 0) {
-        currentScopeText.textContent = 'Card'; clearBtn.classList.remove('hidden'); return;
+        currentScopeText.textContent = 'Card'; clearBtn.disabled = false; return;
     }
     if (pVal) {
         const hasV = profileSettings[pVal]?.fields && Object.keys(profileSettings[pVal].fields).length > 0;
         const hasS = profileStyleOverrides[pVal] && Object.keys(profileStyleOverrides[pVal]).length > 0;
-        if (hasV || hasS) { currentScopeText.textContent = 'Profile'; clearBtn.classList.remove('hidden'); return; }
+        if (hasV || hasS) { currentScopeText.textContent = 'Profile'; clearBtn.disabled = false; return; }
     }
-    currentScopeText.textContent = 'Global'; clearBtn.classList.add('hidden');
+    currentScopeText.textContent = 'Global'; clearBtn.disabled = true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCOPE SELECT — grey out options above the card's effective level
+// ─────────────────────────────────────────────────────────────────────────────
+function getCardEffectiveScope() {
+    // Returns 'card', 'profile', or 'global' based on what overrides exist for this card
+    if (cardOverrides[currentIndex] && Object.keys(cardOverrides[currentIndex]).length > 0) return 'card';
+    const pVal = getProfileVal();
+    if (pVal) {
+        const hasV = profileSettings[pVal]?.fields && Object.keys(profileSettings[pVal].fields).length > 0;
+        const hasS = profileStyleOverrides[pVal] && Object.keys(profileStyleOverrides[pVal]).length > 0;
+        if (hasV || hasS) return 'profile';
+    }
+    return 'global';
+}
+
+function updateScopeSelectOptions() {
+    const effectiveScope = getCardEffectiveScope();
+    const pVal = getProfileVal();
+    const optGlobal  = scopeSelect.querySelector('option[value="global"]');
+    const optProfile = scopeSelect.querySelector('option[value="profile"]');
+    const optCard    = scopeSelect.querySelector('option[value="card"]');
+
+    // If no profile trigger column is set, profile option is always disabled
+    const hasProfile = !!pVal;
+
+    if (effectiveScope === 'card') {
+        // Card has overrides — lock to card level; global & profile are greyed
+        optGlobal.disabled  = true;
+        optProfile.disabled = true;
+        optCard.disabled    = false;
+        optGlobal.textContent  = 'GLOBAL (card overrides)';
+        optProfile.textContent = hasProfile ? 'PROFILE (card overrides)' : 'PROFILE (no profile)';
+        optCard.textContent    = 'CARD';
+    } else if (effectiveScope === 'profile') {
+        // Profile has overrides — global is greyed, card is available
+        optGlobal.disabled  = true;
+        optProfile.disabled = false;
+        optCard.disabled    = false;
+        optGlobal.textContent  = 'GLOBAL (profile overrides)';
+        optProfile.textContent = 'PROFILE';
+        optCard.textContent    = 'CARD';
+    } else {
+        // Global — all options available (profile only if column set)
+        optGlobal.disabled  = false;
+        optProfile.disabled = !hasProfile;
+        optCard.disabled    = false;
+        optGlobal.textContent  = 'GLOBAL';
+        optProfile.textContent = hasProfile ? 'PROFILE' : 'PROFILE (no profile set)';
+        optCard.textContent    = 'CARD';
+    }
+}
+
+function setDefaultEditScope() {
+    const effectiveScope = getCardEffectiveScope();
+    scopeSelect.value = effectiveScope;
+    updateScopeSelectOptions();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1336,6 +1400,9 @@ function render(forExport = false) {
     const row = data[currentIndex];
     const pVal = getProfileVal() || '';
     document.getElementById('activeProfileDisplay').textContent = pVal ? `Profile: ${pVal}` : 'Global Context';
+
+    // Keep scope dropdown options greyed/enabled to reflect this card's effective level
+    if (isEditMode && !forExport) updateScopeSelectOptions();
 
     // Template
     let finalTemplateName = globalTemplateName;
@@ -1517,8 +1584,16 @@ function updateToolbarUI() {
     } else { sc.classList.add('hidden'); }
     const hint = document.getElementById('modeHint');
     if (hint) {
-        if (isStyleMode) { hint.textContent = '✦ Style mode — dbl-click to edit & select text for B/I/U'; hint.style.color = '#f97316'; }
-        else             { hint.textContent = '▶ Move mode — toggle Style for more options'; hint.style.color = '#60a5fa'; }
+        if (!selectedHeader) {
+            hint.textContent = '◈ Select a Target scope before making changes';
+            hint.style.color = '#a78bfa';
+        } else if (isStyleMode) {
+            hint.textContent = '✦ Style mode — dbl-click to edit & select text for B/I/U';
+            hint.style.color = '#f97316';
+        } else {
+            hint.textContent = '▶ Move mode — toggle Style for more options';
+            hint.style.color = '#60a5fa';
+        }
     }
     updateScopeText();
 }
@@ -1632,13 +1707,22 @@ document.getElementById('exportAllBtn').onclick       = exportAllCards;
 document.getElementById('triggerCol').onchange        = () => render();
 document.getElementById('savingScopeSelect').onchange = () => { updateScopeText(); updateToolbarUI(); render(); };
 
+
 document.getElementById('clearScopeBtn').onclick = () => {
-    const scope = currentScopeText.textContent, pVal = getProfileVal();
-    if (scope === 'Card') delete cardOverrides[currentIndex];
-    else if (scope === 'Profile' && pVal) {
+    const pVal = getProfileVal();
+    const effectiveScope = getCardEffectiveScope();
+
+    if (effectiveScope === 'card') {
+        // Remove card-level overrides; card will now fall back to profile (if any) or global
+        delete cardOverrides[currentIndex];
+    } else if (effectiveScope === 'profile' && pVal) {
+        // Remove profile-level overrides; profile will now fall back to global
         if (profileSettings[pVal]) profileSettings[pVal].fields = {};
         if (profileStyleOverrides[pVal]) delete profileStyleOverrides[pVal];
     }
+
+    // After clearing, re-default the scope dropdown to wherever the card now lands
+    if (isEditMode) setDefaultEditScope();
     render();
 };
 
@@ -1657,7 +1741,13 @@ document.getElementById('toggleEditBtn').onclick = () => {
     document.getElementById('toggleEditBtn').textContent = isEditMode ? 'Exit Layout' : 'Edit Layout';
     document.getElementById('toggleEditBtn').classList.toggle('active', isEditMode);
     if (!isEditMode) { selectedHeader = null; isStyleMode = false; document.getElementById('modeToggle').checked = false; }
-    else { scopeSelect.value = 'global'; }
+    else {
+        selectedHeader = null; isStyleMode = false; document.getElementById('modeToggle').checked = false;
+        setDefaultEditScope();
+        // Force hint to default state — must happen after render() too, so we use setTimeout
+        const hint = document.getElementById('modeHint');
+        if (hint) { hint.textContent = '◈ Select a Target scope before making changes'; hint.style.color = '#a78bfa'; }
+    }
     render();
 };
 
