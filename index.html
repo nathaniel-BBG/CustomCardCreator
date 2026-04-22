@@ -323,6 +323,18 @@
     </div>
 </div>
 
+<!-- Edit Card Modal -->
+<div id="editCardModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:#18181b;border:1px solid #3f3f46;border-radius:16px;padding:28px;width:360px;box-shadow:0 32px 64px rgba(0,0,0,0.7);">
+        <h2 style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#f97316;margin-bottom:20px;">Edit Card</h2>
+        <div id="ecmFields" style="max-height:60vh;overflow-y:auto;margin-bottom:20px;padding-right:4px;"></div>
+        <div class="flex gap-3">
+            <button id="ecmCancel" style="flex:1;padding:10px;border-radius:10px;background:#27272a;border:1px solid #3f3f46;color:#a1a1aa;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#3f3f46';this.style.color='#fff'" onmouseout="this.style.background='#27272a';this.style.color='#a1a1aa'">Cancel</button>
+            <button id="ecmConfirm" style="flex:2;padding:10px;border-radius:10px;background:#ea580c;border:1px solid #f97316;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#f97316'" onmouseout="this.style.background='#ea580c'">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 <!-- Mini floating format bar -->
 <div id="miniFormatBar">
     <button class="mini-btn" id="miniBold"      title="Bold (Ctrl+B)"><b>B</b></button>
@@ -871,14 +883,23 @@
     <div class="p-6 bg-zinc-900 border-t border-zinc-800">
         <select id="cardSelector" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-xs text-white mb-4 outline-none"></select>
         <div class="grid grid-cols-2 gap-3 mb-3">
-            <button id="prevBtn" class="bg-zinc-800 py-3 rounded-xl text-[10px] font-black border border-zinc-700 hover:text-white transition-colors">PREV</button>
-            <button id="nextBtn" class="bg-zinc-800 py-3 rounded-xl text-[10px] font-black border border-zinc-700 hover:text-white transition-colors">NEXT</button>
+            <!-- Left col: PREV + Edit Card -->
+            <div class="flex flex-col gap-2">
+                <button id="prevBtn" class="bg-zinc-800 py-3 rounded-xl text-[10px] font-black border border-zinc-700 hover:text-white transition-colors">PREV</button>
+                <button id="editCardBtn" class="flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-orange-900/40 border border-zinc-700 hover:border-orange-700/60 text-zinc-400 hover:text-orange-400 rounded-xl py-2 text-[9px] font-black uppercase tracking-widest transition-all">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit Card
+                </button>
+            </div>
+            <!-- Right col: NEXT + Add Blank Card -->
+            <div class="flex flex-col gap-2">
+                <button id="nextBtn" class="bg-zinc-800 py-3 rounded-xl text-[10px] font-black border border-zinc-700 hover:text-white transition-colors">NEXT</button>
+                <button id="addBlankCardBtn" class="flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white rounded-xl py-2 text-[9px] font-black uppercase tracking-widest transition-all">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Blank
+                </button>
+            </div>
         </div>
-        <!-- Add Blank Card -->
-        <button id="addBlankCardBtn" class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white rounded-xl py-2.5 mb-3 text-[10px] font-black uppercase tracking-widest transition-all">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add Blank Card
-        </button>
         <!-- Amount per card -->
         <div class="flex items-center justify-between bg-zinc-800/60 border border-zinc-700 rounded-xl px-4 py-2.5">
             <div class="flex flex-col">
@@ -2093,6 +2114,104 @@ document.getElementById('acmConfirm').addEventListener('click', () => {
     saveSnapshot();
     flashMsg(`✓ Card "${displayName}" added`, '#22c55e', 2500);
 });
+// ── Edit Card Modal ───────────────────────────────────────────────────────────
+document.getElementById('editCardBtn').addEventListener('click', () => {
+    if (!data.length || isCardBack(currentIndex)) {
+        flashMsg('⚠ No editable card selected', '#f97316', 2000);
+        return;
+    }
+    const modal = document.getElementById('editCardModal');
+    const fieldsContainer = document.getElementById('ecmFields');
+    fieldsContainer.innerHTML = '';
+
+    const trigger = triggerColSelect.value;
+    const skipCols = new Set(['amount', 'art', 'image', 'artwork', 'template']);
+    const visibleHeaders = headers.filter(h => !skipCols.has(h.toLowerCase()));
+    const row = data[currentIndex];
+
+    if (!visibleHeaders.length) {
+        fieldsContainer.innerHTML = '<p style="font-size:11px;color:#71717a;text-align:center;">No editable fields available.</p>';
+    } else {
+        visibleHeaders.forEach(h => {
+            const isProfileCol = trigger && h === trigger;
+            const currentVal = String(row[h] || '');
+            const wrap = document.createElement('div');
+            wrap.style.marginBottom = '14px';
+
+            if (isProfileCol) {
+                const existingVals = [...new Set(
+                    data.filter((r, i) => !isCardBack(i))
+                        .map(r => String(r[h] || '').trim())
+                )].filter(Boolean).sort();
+
+                let options = `<option value="">— select or type —</option>`;
+                existingVals.forEach(v => {
+                    options += `<option value="${v}"${v === currentVal ? ' selected' : ''}>${v}</option>`;
+                });
+
+                wrap.innerHTML = `
+                    <span class="acm-label">${h} <span style="color:#f97316;font-size:8px;">▸ Profile</span></span>
+                    <select class="acm-select ecm-field" data-header="${h}">${options}</select>
+                    <input class="acm-input ecm-field-custom" data-header="${h}" type="text" placeholder="Or type a new value…" autocomplete="off" style="margin-top:6px;display:${existingVals.includes(currentVal) ? 'none' : 'block'};" value="${existingVals.includes(currentVal) ? '' : currentVal}">
+                `;
+                fieldsContainer.appendChild(wrap);
+                const sel = wrap.querySelector('select');
+                const custom = wrap.querySelector('.ecm-field-custom');
+                sel.addEventListener('change', () => {
+                    custom.style.display = sel.value === '' ? 'block' : 'none';
+                    if (sel.value !== '') custom.value = '';
+                    else custom.focus();
+                });
+            } else {
+                wrap.innerHTML = `<span class="acm-label">${h}</span><input class="acm-input ecm-field" data-header="${h}" type="text" value="${currentVal.replace(/"/g, '&quot;')}" autocomplete="off">`;
+            }
+            fieldsContainer.appendChild(wrap);
+        });
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => { const first = fieldsContainer.querySelector('input, select'); if (first) first.focus(); }, 50);
+});
+
+document.getElementById('ecmCancel').addEventListener('click', () => {
+    document.getElementById('editCardModal').style.display = 'none';
+});
+document.getElementById('editCardModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('editCardModal'))
+        document.getElementById('editCardModal').style.display = 'none';
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('editCardModal').style.display === 'flex')
+        document.getElementById('editCardModal').style.display = 'none';
+});
+
+document.getElementById('ecmConfirm').addEventListener('click', () => {
+    const modal = document.getElementById('editCardModal');
+    const row = data[currentIndex];
+
+    document.querySelectorAll('#ecmFields .ecm-field').forEach(el => {
+        const h = el.dataset.header;
+        if (!h) return;
+        if (el.tagName === 'SELECT') {
+            const custom = el.closest('div').querySelector('.ecm-field-custom');
+            if (custom && custom.style.display !== 'none' && custom.value.trim()) {
+                row[h] = custom.value.trim();
+            } else if (el.value) {
+                row[h] = el.value;
+            }
+        } else {
+            row[h] = el.value;
+        }
+    });
+
+    modal.style.display = 'none';
+    render();
+    saveSnapshot();
+    const nameHeader = headers.find(h => h.toLowerCase() === 'name') || headers[0];
+    const displayName = row[nameHeader] || 'Card';
+    flashMsg(`✓ "${displayName}" updated`, '#22c55e', 2500);
+});
+
 document.getElementById('amountDecBtn').onclick      = () => { if (data.length) setCardAmount(currentIndex, getCardAmount(currentIndex) - 1); };
 document.getElementById('amountIncBtn').onclick      = () => { if (data.length) setCardAmount(currentIndex, getCardAmount(currentIndex) + 1); };
 // Export buttons wired below via split-button logic
