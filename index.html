@@ -245,6 +245,8 @@
         .export-menu-item:hover { background: #27272a; color: #ffffff; }
         .export-menu-item[data-action="tts"] { color: #818cf8; }
         .export-menu-item[data-action="tts"]:hover { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+        .export-menu-item[data-action="excel"] { color: #4ade80; }
+        .export-menu-item[data-action="excel"]:hover { background: rgba(34,197,94,0.10); color: #86efac; }
 
         /* Card-back export toggle uses indigo instead of orange */
         #cbIncludeToggle:checked + #cbIncludeSlider { background-color: #6366f1; }
@@ -752,7 +754,11 @@
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                 Print Sheet – Letter
             </div>
-            <div class="export-menu-item" data-action="tts" style="border-top:1px solid #27272a;">
+            <div class="export-menu-item" data-action="excel" style="border-top:1px solid #27272a;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                Export to Excel
+            </div>
+            <div class="export-menu-item" data-action="tts">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M16 3v18M2 9h20M2 15h20"/></svg>
                 Export for TTS
             </div>
@@ -3423,12 +3429,218 @@ async function exportForTTS() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// EXCEL EXPORT  (with rich-text b/i/u preserved as XLSX inline runs)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Convert an HTML string (with <b>,<i>,<u> tags) into an array of SheetJS
+ * rich-text run objects: [{ t: "text", s: { bold, italic, underline } }, …]
+ * Inline <img> icons are converted to their {token} placeholder text.
+ */
+function htmlToXlsxRichText(html) {
+    if (!html) return [{ t: '' }];
+
+    // Replace <img> inline icons with their token text (or a placeholder)
+    const withTokens = html.replace(/<img[^>]*alt="([^"]*)"[^>]*>/gi, (m, alt) => {
+        // Try to recover the {token} from the src/class if alt is empty
+        const srcMatch = m.match(/src="[^"]*"/);
+        // Just use alt text if present, else empty string
+        return alt || '';
+    });
+
+    // Parse the HTML into a flat list of runs, tracking bold/italic/underline state
+    const tmp = document.createElement('div');
+    tmp.innerHTML = withTokens;
+
+    const runs = [];
+
+    function walk(node, state) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            if (text) runs.push({ t: text, s: { ...state } });
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const tag = node.tagName.toLowerCase();
+        const next = { ...state };
+        if (tag === 'b' || tag === 'strong') next.bold = true;
+        if (tag === 'i' || tag === 'em')     next.italic = true;
+        if (tag === 'u')                      next.underline = true;
+        if (tag === 'br')                     { runs.push({ t: '\n', s: { ...state } }); return; }
+        node.childNodes.forEach(child => walk(child, next));
+    }
+
+    tmp.childNodes.forEach(child => walk(child, {}));
+
+    // Merge adjacent runs with identical styles to keep the array compact
+    const merged = [];
+    runs.forEach(run => {
+        const prev = merged[merged.length - 1];
+        if (prev &&
+            !!prev.s.bold      === !!run.s.bold &&
+            !!prev.s.italic    === !!run.s.italic &&
+            !!prev.s.underline === !!run.s.underline) {
+            prev.t += run.t;
+        } else {
+            merged.push({ t: run.t, s: { ...run.s } });
+        }
+    });
+
+    return merged.length ? merged : [{ t: '' }];
+}
+
+/**
+ * Build a SheetJS cell object. If the value has any bold/italic/underline
+ * formatting the cell gets type 's' with a rich-text `r` array; otherwise
+ * it's a plain string cell.
+ */
+function buildXlsxCell(cardIdx, header) {
+    // richTextStore holds HTML for fields that were edited with the rich editor
+    const richHtml = richTextStore[cardIdx]?.[header];
+    const rawVal   = data[cardIdx]?.[header];
+
+    let html;
+    if (richHtml !== undefined) {
+        html = richHtml;
+    } else if (rawVal !== undefined && rawVal !== null) {
+        // Plain data — treat as literal text (no formatting needed)
+        return { t: 's', v: String(rawVal) };
+    } else {
+        return { t: 's', v: '' };
+    }
+
+    // Check whether formatting tags actually exist
+    const hasFormatting = /<[biu][\s>]/i.test(html) || /<\/[biu]>/i.test(html);
+
+    if (!hasFormatting) {
+        // No markup — strip any escaped entities and return plain
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html;
+        return { t: 's', v: tmp.textContent || '' };
+    }
+
+    // Build rich text runs
+    const runs = htmlToXlsxRichText(html);
+
+    // Plain-text value (required by SheetJS alongside the rich array)
+    const plainText = runs.map(r => r.t).join('');
+
+    // Convert to SheetJS rich-text format
+    const xlsxRuns = runs.map(r => {
+        const run = { t: r.t };
+        if (r.s.bold || r.s.italic || r.s.underline) {
+            run.s = {};
+            if (r.s.bold)      run.s.bold      = true;
+            if (r.s.italic)    run.s.italic     = true;
+            if (r.s.underline) run.s.underline  = true;
+        }
+        return run;
+    });
+
+    return { t: 's', v: plainText, r: xlsxRuns };
+}
+
+function exportToExcel() {
+    try {
+        // Build clean card rows (skip the card-back sentinel)
+        const cardRows   = data.filter(row => row.__sentinel !== CARD_BACK_SENTINEL);
+        const cardIdxMap = []; // maps filtered row position → original data index
+        data.forEach((row, i) => { if (row.__sentinel !== CARD_BACK_SENTINEL) cardIdxMap.push(i); });
+
+        if (cardRows.length === 0) {
+            flashMsg('✗ No cards to export', '#ef4444', 3000);
+            return;
+        }
+
+        // Gather all column headers (skip internal __sentinel key)
+        const colHeaders = headers.filter(h => h !== '__sentinel');
+
+        // ── Build worksheet manually so we can inject rich-text cells ──
+        const wb = XLSX.utils.book_new();
+        const ws = {};
+
+        // Header row (row 0)
+        colHeaders.forEach((h, ci) => {
+            const addr = XLSX.utils.encode_cell({ r: 0, c: ci });
+            ws[addr] = {
+                t: 's', v: h,
+                s: {
+                    fill:      { patternType: 'solid', fgColor: { rgb: 'EA580C' } },
+                    font:      { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+                    border:    { bottom: { style: 'medium', color: { rgb: 'F97316' } } },
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                }
+            };
+        });
+
+        // Data rows
+        const lightFill = { patternType: 'solid', fgColor: { rgb: 'FFF7ED' } };
+        const evenFill  = { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } };
+
+        cardIdxMap.forEach((dataIdx, ri) => {
+            const fill = (ri % 2 === 0) ? evenFill : lightFill;
+            colHeaders.forEach((h, ci) => {
+                const addr = XLSX.utils.encode_cell({ r: ri + 1, c: ci });
+                const cell = buildXlsxCell(dataIdx, h);
+                cell.s = {
+                    fill:      fill,
+                    alignment: { vertical: 'center', wrapText: true },
+                    font:      { sz: 10 },
+                };
+                // Preserve per-run font styles while keeping cell-level style
+                if (cell.r) {
+                    cell.r = cell.r.map(run => ({
+                        t: run.t,
+                        s: { sz: 10, ...(run.s || {}) }
+                    }));
+                }
+                ws[addr] = cell;
+            });
+        });
+
+        // Set worksheet range
+        ws['!ref'] = XLSX.utils.encode_range({
+            s: { r: 0, c: 0 },
+            e: { r: cardRows.length, c: colHeaders.length - 1 }
+        });
+
+        // Auto column widths
+        ws['!cols'] = colHeaders.map(h => {
+            let max = String(h).length;
+            cardIdxMap.forEach(dataIdx => {
+                const v = data[dataIdx]?.[h];
+                if (v !== undefined) {
+                    // Use plain text length (strip tags) for width estimate
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = richTextStore[dataIdx]?.[h] ?? String(v);
+                    max = Math.max(max, (tmp.textContent || '').length);
+                }
+            });
+            return { wch: Math.min(50, Math.max(10, max + 2)) };
+        });
+
+        // Freeze header row
+        ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Cards');
+
+        const timestamp = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `card-project-${timestamp}.xlsx`);
+        flashMsg('✓ Excel file exported!', '#22c55e', 3000);
+    } catch (err) {
+        console.error('Excel export error:', err);
+        flashMsg('✗ Excel export failed', '#ef4444', 4000);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // SPLIT EXPORT BUTTON WIRING
 // ─────────────────────────────────────────────────────────────────────────────
 const EXPORT_OPTIONS = {
     current: { label: 'Export Current',      fn: downloadCurrent,  icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>' },
     deck:    { label: 'Export Full Deck',     fn: exportAllCards,   icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' },
     print:   { label: 'Print Sheet – Letter', fn: exportToWord,     icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>' },
+    excel:   { label: 'Export to Excel',      fn: exportToExcel,    icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>' },
     tts:     { label: 'Export for TTS',       fn: exportForTTS,     icon: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 3v18M16 3v18M2 9h20M2 15h20"/></svg>' },
 };
 
@@ -3451,7 +3663,9 @@ function setExportAction(action) {
     // Highlight active item
     exportDropdownMenu.querySelectorAll('.export-menu-item').forEach(el => {
         el.style.background = el.dataset.action === action ? '#27272a' : '';
-        el.style.color = el.dataset.action === 'tts' ? (el.dataset.action === action ? '#a5b4fc' : '#818cf8') : (el.dataset.action === action ? '#ffffff' : '');
+        if (el.dataset.action === 'tts')   el.style.color = el.dataset.action === action ? '#a5b4fc' : '#818cf8';
+        else if (el.dataset.action === 'excel') el.style.color = el.dataset.action === action ? '#86efac' : '#4ade80';
+        else el.style.color = el.dataset.action === action ? '#ffffff' : '';
     });
 }
 
