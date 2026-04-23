@@ -389,10 +389,12 @@
       <div class="toc-label">Jump to</div>
       <span class="toc a" onclick="ipScroll('ih-sheet')">Spreadsheet Setup</span>
       <span class="toc a" onclick="ipScroll('ih-data')">Loading Your Data</span>
+      <span class="toc a" onclick="ipScroll('ih-manual')">Manual Cards</span>
       <span class="toc a" onclick="ipScroll('ih-frames')">Frame Assets</span>
       <span class="toc a" onclick="ipScroll('ih-art')">Art Assets</span>
       <span class="toc a" onclick="ipScroll('ih-icons')">Icon Library</span>
       <span class="toc a" onclick="ipScroll('ih-layout')">Edit Layout</span>
+      <span class="toc a" onclick="ipScroll('ih-keyboard')">Keyboard Shortcuts</span>
       <span class="toc a" onclick="ipScroll('ih-fonts')">Font Choices</span>
       <span class="toc a" onclick="ipScroll('ih-artedit')">Edit Art</span>
       <span class="toc a" onclick="ipScroll('ih-layers')">Layer List</span>
@@ -400,6 +402,7 @@
       <span class="toc a" onclick="ipScroll('ih-cardback')">Card Back</span>
       <span class="toc a" onclick="ipScroll('ih-copies')">Export Copies</span>
       <span class="toc a" onclick="ipScroll('ih-export')">Exporting</span>
+      <span class="toc a" onclick="ipScroll('ih-tts')">TTS Import &amp; Export</span>
       <span class="toc a" onclick="ipScroll('ih-save')">Save &amp; Load</span>
     </div>
 
@@ -424,7 +427,19 @@
         <li>Use <strong>PREV / NEXT</strong> or the dropdown at the bottom of the sidebar to browse cards.</li>
         <li>Add a column named <code>art</code> or <code>image</code> to auto-link artwork by filename.</li>
         <li>Excel bold/italic/underline is preserved automatically.</li>
+        <li>You can <strong>Edit Card</strong> data directly inside the tool — click the <strong>Edit Card</strong> button in the sidebar to update any field value for the current card without touching your spreadsheet.</li>
       </ul>
+    </div>
+
+    <div class="sec" id="ih-manual">
+      <h2>Manual Cards</h2>
+      <ul>
+        <li>No spreadsheet? No problem. Click <strong>+ Add Card</strong> in the sidebar to create cards from scratch.</li>
+        <li>A modal will prompt you to fill in any available fields. Leave fields blank and edit them later using the <strong>Edit Card</strong> button.</li>
+        <li>Manual cards can be combined with imported spreadsheet data — you can add blank cards to an existing deck at any point.</li>
+        <li>Set a card to <strong>0 copies</strong> to use it as a draft or placeholder without including it in exports.</li>
+      </ul>
+      <div class="note">The first time you add a manual card with no spreadsheet loaded, a <code>Name</code> field is created automatically.</div>
     </div>
 
     <div class="sec" id="ih-frames">
@@ -433,6 +448,7 @@
         <li>Upload transparent PNG overlays (borders, card chrome) via the <strong>Frame Assets</strong> drop zone.</li>
         <li>Click a thumbnail to apply it as the active frame. Hover + click <strong>✕</strong> to remove.</li>
         <li>Each uploaded frame also has a <strong>▣ Card Back</strong> button beneath it — click it to designate that image as the card back template. Click again to restore the default.</li>
+        <li>Frames can be assigned per profile — activate a profile first, then click a frame to set it for that card type only.</li>
       </ul>
     </div>
 
@@ -443,25 +459,42 @@
         <li>Once uploaded, click <strong>Browse &amp; Assign Art</strong> to open the art library and click any image to assign it to the current card. Click again to unassign.</li>
         <li>The currently assigned art shows as a small preview in the sidebar so you always know what's set for the current card.</li>
         <li>Or use an <code>art</code> column in your spreadsheet — Deck Architect matches by filename or the name set in the library.</li>
+        <li>Each art entry has a rename field — give images friendly names for easier identification in the library.</li>
       </ul>
     </div>
 
     <div class="sec" id="ih-icons">
       <h2>Icon Library</h2>
       <ul>
-        <li>Upload an icon, give it a token name (e.g. <code>fire</code>), then type <code>{fire}</code> in any spreadsheet cell to embed it inline.</li>
-        <li>Drag the <strong>⊿</strong> handle on an icon entry to adjust its size.</li>
+        <li>Upload an icon image, give it a token name (e.g. <code>fire</code>), then type <code>{fire}</code> in any spreadsheet cell or inline editor to embed it inline.</li>
+        <li>Drag the <strong>⊿</strong> corner handle on an icon entry to adjust its display size.</li>
+        <li>Icons scale proportionally with font size and are baked into the exported PNG.</li>
       </ul>
     </div>
 
     <div class="sec" id="ih-layout">
       <h2>Edit Layout</h2>
       <ul>
-        <li><strong>Move mode</strong> — drag a field to reposition it; drag the orange corner to resize.</li>
-        <li><strong>Style mode</strong> — toggle the Style switch to change font family, font size, colour, bold, italic, and alignment.</li>
-        <li><strong>Inline edit</strong> — double-click a field in Style mode to edit text directly. Select text for the bold/italic/underline popup.</li>
-        <li><strong>Target</strong> dropdown: <strong>Global</strong> (all cards), <strong>Profile</strong> (this type), or <strong>Card</strong> (this card only).</li>
+        <li>Click <strong>Edit Layout</strong> in the header to enter layout mode. Click it again to exit.</li>
+        <li><strong>Move mode</strong> (default) — click a field to select it (highlighted in orange), then drag it to reposition. Drag the orange corner handle to resize the field box.</li>
+        <li><strong>Style mode</strong> — toggle the <strong>Style</strong> switch in the toolbar to access font family, font size, colour, bold, italic, underline, and text alignment controls.</li>
+        <li><strong>Inline edit</strong> — double-click a field while in Style mode to edit its text directly on the card. Select text to get a bold/italic/underline popup.</li>
+        <li><strong>Target</strong> dropdown: <strong>Global</strong> applies changes to all cards, <strong>Profile</strong> applies to this card type only, <strong>Card</strong> applies to this card only. The <strong>↺ reset</strong> button next to the scope label clears any card- or profile-level override and reverts to global.</li>
+        <li>The <strong>coordinates display</strong> in the toolbar shows the selected field's current position and size in pixels for precise placement.</li>
       </ul>
+      <div class="note">Changes are undoable — use <strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong> or the undo/redo buttons in the header.</div>
+    </div>
+
+    <div class="sec" id="ih-keyboard">
+      <h2>Keyboard Shortcuts</h2>
+      <ul>
+        <li><strong>Arrow keys</strong> — with a field selected in Edit Layout (Move mode), nudge it 1px per press in any direction.</li>
+        <li><strong>Shift + Arrow keys</strong> — nudge the selected field 10px per press for faster repositioning.</li>
+        <li><strong>Ctrl+Z</strong> — undo the last change.</li>
+        <li><strong>Ctrl+Y</strong> (or <strong>Ctrl+Shift+Z</strong>) — redo.</li>
+        <li><strong>Escape</strong> — close any open modal (Add Card, Edit Card).</li>
+      </ul>
+      <div class="note">Keyboard shortcuts are disabled while typing in an input field or the inline editor so they don't interfere with text entry.</div>
     </div>
 
     <div class="sec" id="ih-fonts">
@@ -510,69 +543,82 @@
       <h2>Edit Art</h2>
       <ul>
         <li>Click <strong>Edit Art</strong> in the header to enter art edit mode.</li>
-        <li>Use the <strong>Art Scale</strong> slider to zoom the artwork (50–300%).</li>
+        <li>Use the <strong>Art Scale</strong> slider to zoom the artwork in or out (50–300%).</li>
         <li>Click and drag directly on the card to pan the image into position.</li>
-        <li>Click <strong>↺ Reset</strong> to return to 100% centred.</li>
+        <li>Click <strong>↺ Reset</strong> to return the art to 100% scale, centred.</li>
       </ul>
-      <div class="note">Scale and position are saved per card and baked into the exported PNG.</div>
+      <div class="note">Scale and pan position are saved per card and baked into the exported PNG. Art edits do not affect other cards.</div>
     </div>
 
     <div class="sec" id="ih-layers">
       <h2>Layer List</h2>
       <ul>
         <li>The <strong>Layer List</strong> in the sidebar shows all fields from your spreadsheet as toggleable rows.</li>
-        <li>Click the <strong>eye icon</strong> on any row to hide or show that field on the card. Visibility can be set globally, per profile, or per card depending on the active Target scope.</li>
-        <li>Use this to quickly suppress columns you don't want rendered (e.g. internal reference fields) without deleting them from your data.</li>
+        <li>Click the <strong>eye icon</strong> on any row to hide or show that field on the card.</li>
+        <li>Visibility respects the active <strong>Target</strong> scope — you can hide a field globally, for one profile type, or for a single card only.</li>
+        <li>Use this to suppress columns you don't want rendered (e.g. internal reference fields or the <code>art</code> column) without removing them from your data.</li>
       </ul>
     </div>
 
     <div class="sec" id="ih-profiles">
       <h2>Profile Logic</h2>
       <ul>
-        <li>Pick a column (e.g. <code>Type</code>) under <strong>Profile Logic</strong> — a profile is created for each unique value.</li>
-        <li>Click a profile to activate it, then use Edit Layout with <strong>Target: Profile</strong> to style just that card type.</li>
-        <li>You can assign a different frame to each profile.</li>
+        <li>Pick a column (e.g. <code>Type</code>) under <strong>Profile Logic</strong> in the sidebar — a profile is created for each unique value in that column.</li>
+        <li>Click a profile chip to activate it. The header shows the active profile context.</li>
+        <li>With a profile active, use Edit Layout with <strong>Target: Profile</strong> to set field positions, sizes, fonts, and visibility for just that card type.</li>
+        <li>You can assign a different frame to each profile — activate the profile first, then click the frame thumbnail.</li>
       </ul>
+      <div class="note">Profile overrides sit between Global and Card scopes. Card-level changes always take highest priority.</div>
     </div>
 
     <div class="sec" id="ih-cardback">
       <h2>Card Back</h2>
       <ul>
         <li>Every deck automatically includes a <strong>Card Back</strong> as its final entry — navigate to it using NEXT or the card selector dropdown.</li>
-        <li>When on the card back, a purple banner appears on the preview. Global layout rules do not apply here — it is a fully independent canvas.</li>
+        <li>When viewing the card back, a purple banner appears above the preview. Global layout rules do not apply here — it is a fully independent canvas.</li>
         <li>To set a custom card back image, upload your art and assign it via <strong>Browse &amp; Assign Art</strong>, just like any other card.</li>
-        <li>To use a frame template as the card back design, click the <strong>▣ Card Back</strong> button beneath any frame thumbnail in the Frame Assets section. Click it again to restore the default.</li>
+        <li>To use a frame template as the card back design, click the <strong>▣ Card Back</strong> button beneath any frame thumbnail in Frame Assets. Click it again to restore the default.</li>
+        <li>Use the toggle on the card back banner to include or exclude the card back from <strong>Print Sheet</strong> and <strong>Full Deck</strong> exports. TTS export always includes it automatically.</li>
       </ul>
-      <div class="note">The card back is always exported last in the full deck ZIP when included. Use the toggle on the Card Back banner to include or exclude it from Print Sheet and Full Deck exports. TTS export always includes it.</div>
     </div>
 
     <div class="sec" id="ih-copies">
       <h2>Export Copies</h2>
       <ul>
-        <li>The <strong>Export Copies</strong> control (the <strong>+</strong> / <strong>−</strong> buttons at the bottom of the sidebar) sets how many copies of the current card are included when exporting a full deck.</li>
-        <li>Set a card to <strong>0</strong> to exclude it from the export entirely — useful for work-in-progress or placeholder cards.</li>
-        <li>You can also pre-set copy counts in your spreadsheet by adding a column named <code>amount</code>. Deck Architect reads this value on load and reflects it in the control.</li>
+        <li>The <strong>Export Copies</strong> control (the <strong>+</strong> / <strong>−</strong> buttons at the bottom of the sidebar) sets how many copies of the current card are included in a full deck export.</li>
+        <li>Set a card to <strong>0</strong> to exclude it from exports entirely — useful for placeholder or work-in-progress cards.</li>
+        <li>You can pre-set copy counts in your spreadsheet by adding a column named <code>amount</code>. Deck Architect reads this on load and reflects it in the control.</li>
       </ul>
-      <div class="note">Export Copies only affects the <strong>Export Full Deck</strong> output — it has no effect on <strong>Export Current</strong>.</div>
+      <div class="note">Export Copies only affects <strong>Export Full Deck</strong>, <strong>Print Sheet</strong>, and <strong>TTS</strong> outputs — it has no effect on <strong>Export Current</strong>.</div>
     </div>
 
     <div class="sec" id="ih-export">
       <h2>Exporting</h2>
       <ul>
-        <li><strong>Export Current</strong> — downloads a PNG of the current card at full resolution.</li>
-        <li><strong>Export Full Deck</strong> — renders every card (respecting each card's Export Copies count) and downloads them as a ZIP of PNGs.</li>
-        <li>The card back can optionally be included in Full Deck and Print Sheet exports — use the toggle in the <strong>Card Back</strong> banner. TTS export always includes it in slot 70.</li>
+        <li><strong>Export Current</strong> — downloads a full-resolution PNG of the card currently on screen.</li>
+        <li><strong>Export Full Deck</strong> — renders every card (respecting Export Copies counts) and downloads them as a ZIP of individual PNGs.</li>
+        <li><strong>Print Sheet – Letter</strong> — lays all cards out on landscape US Letter pages (3 columns × 3 rows per page) and downloads a <code>.docx</code> Word file, ready to print and cut. Each card is sized at 2.49" × 3.47" (standard poker card).</li>
+        <li><strong>Export for TTS</strong> — see the TTS section below.</li>
       </ul>
-      <div class="note">Don't close the tab while the export overlay is running.</div>
+      <div class="note">Don't close the tab while the export overlay is running — all rendering happens in your browser.</div>
+    </div>
+
+    <div class="sec" id="ih-tts">
+      <h2>Tabletop Simulator (TTS)</h2>
+      <ul>
+        <li><strong>Export for TTS</strong> — stitches all cards into 10×7 grid sheets (up to 69 cards per sheet) at print resolution and downloads them as PNGs. The card back is placed in slot 70 automatically. Multiple sheets are generated if your deck exceeds 69 cards.</li>
+        <li><strong>Load TTS Sheets</strong> — import cards from existing TTS sprite sheets. Click the button in the sidebar, select one or more TTS sheet PNGs, and Deck Architect will slice each slot into individual art assets and add them to your deck automatically. Blank slots are detected and skipped.</li>
+      </ul>
+      <div class="note">TTS sheet images must be standard TTS format: 10 columns × 7 rows (plus the hidden card in slot 70). The importer checks pixel variance to skip empty slots.</div>
     </div>
 
     <div class="sec" id="ih-save">
       <h2>Save &amp; Load</h2>
       <ul>
-        <li><strong>Save Project</strong> — downloads a <code>.deckproject.zip</code> with all your data, images, and settings.</li>
-        <li><strong>Load Project</strong> — restores everything from a saved file, including art assignments, layout, profiles, and copy counts.</li>
+        <li><strong>Save Project</strong> — downloads a <code>.deckproject.zip</code> containing all your data, art assets, icon assets, frame templates, layout settings, profile overrides, card overrides, and copy counts.</li>
+        <li><strong>Load Project</strong> — restores everything from a previously saved <code>.deckproject.zip</code>, including all images and configuration.</li>
       </ul>
-      <div class="note">No auto-save — remember to save regularly.</div>
+      <div class="note">There is no auto-save. Save your project regularly — especially before exporting large decks.</div>
     </div>
 
   </div>
@@ -3271,6 +3317,34 @@ document.addEventListener('keydown', (e) => {
     }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
         e.preventDefault(); redo();
+    }
+
+    // Arrow key nudge for selected field (only in edit mode with a field selected)
+    if (isEditMode && selectedHeader && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const pVal = getProfileVal(), ts = scopeSelect.value;
+        let t;
+        const base = getConfigByScope(selectedHeader);
+        if (ts === 'card') {
+            if (!cardOverrides[currentIndex]) cardOverrides[currentIndex] = {};
+            if (!cardOverrides[currentIndex][selectedHeader]) cardOverrides[currentIndex][selectedHeader] = JSON.parse(JSON.stringify(base));
+            t = cardOverrides[currentIndex][selectedHeader];
+        } else if (ts === 'profile' && pVal) {
+            if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
+            if (!profileStyleOverrides[pVal][selectedHeader]) profileStyleOverrides[pVal][selectedHeader] = JSON.parse(JSON.stringify(base));
+            t = profileStyleOverrides[pVal][selectedHeader];
+        } else { t = fieldConfigs[selectedHeader]; }
+
+        if (e.key === 'ArrowLeft')  t.left = Math.round(t.left - step);
+        if (e.key === 'ArrowRight') t.left = Math.round(t.left + step);
+        if (e.key === 'ArrowUp')    t.top  = Math.round(t.top  - step);
+        if (e.key === 'ArrowDown')  t.top  = Math.round(t.top  + step);
+
+        render();
+        // Save snapshot on keyup so rapid nudging doesn't flood history
+        clearTimeout(window._arrowNudgeTimer);
+        window._arrowNudgeTimer = setTimeout(() => saveSnapshot(), 400);
     }
 });
 
