@@ -811,8 +811,15 @@
         </div>
     </div>
 
+    <!-- Project Name -->
+    <div class="flex items-center gap-2 mt-4">
+        <label class="text-[9px] font-black uppercase tracking-widest text-zinc-500 whitespace-nowrap">Project Name</label>
+        <input id="projectNameInput" type="text" placeholder="my-deck" maxlength="64"
+            class="flex-1 bg-zinc-900 border border-zinc-700 hover:border-zinc-500 focus:border-orange-500 focus:outline-none text-zinc-200 text-[11px] font-semibold rounded-lg px-3 py-1.5 placeholder-zinc-600 transition-all" />
+    </div>
+
     <!-- Save / Load Project -->
-    <div class="flex items-center gap-3 mt-4">
+    <div class="flex items-center gap-3 mt-2">
         <button id="saveProjectBtn" class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest border border-zinc-700 hover:border-zinc-500 transition-all">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             Save Project
@@ -2258,6 +2265,8 @@ document.getElementById('ecmConfirm').addEventListener('click', () => {
 
     modal.style.display = 'none';
     render();
+    populateSelector();
+    document.getElementById('cardSelector').value = currentIndex;
     saveSnapshot();
     const nameHeader = headers.find(h => h.toLowerCase() === 'name') || headers[0];
     const displayName = row[nameHeader] || 'Card';
@@ -3156,6 +3165,7 @@ async function saveProject() {
 
         const meta = {
             version: PROJECT_VERSION, savedAt: new Date().toISOString(),
+            projectName: document.getElementById('projectNameInput').value.trim(),
             data, headers, currentIndex, fieldConfigs,
             profileSettings, profileStyleOverrides, cardOverrides, richTextStore,
             globalTemplateName,
@@ -3169,8 +3179,8 @@ async function saveProject() {
             { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
             ({ percent }) => flashMsg(`⏳ Packing… ${Math.round(percent)}%`, '#f97316', 60000)
         );
-        const firstName = (data.length ? String(Object.values(data[0])[0]) : '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
-        const fn = `${firstName || 'deck'}_${new Date().toISOString().slice(0,10)}.deckproject.zip`;
+        const projectName = (document.getElementById('projectNameInput').value.trim() || (data.length ? String(Object.values(data[0])[0]) : '') || 'deck').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+        const fn = `${projectName}_${new Date().toISOString().slice(0,10)}.deckproject.zip`;
         const a = document.createElement('a'); a.href = URL.createObjectURL(content); a.download = fn;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(a.href), 3000);
@@ -3223,6 +3233,7 @@ async function loadProject(file) {
 
         cardBackTemplateName       = meta.cardBackTemplateName       || null;
         cardBackIncludedInExport   = meta.cardBackIncludedInExport !== false; // default true
+        if (meta.projectName) document.getElementById('projectNameInput').value = meta.projectName;
         data                  = meta.data                  || [];
         headers               = meta.headers               || [];
         currentIndex          = meta.currentIndex          || 0;
