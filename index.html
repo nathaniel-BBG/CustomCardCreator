@@ -14,6 +14,16 @@
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,400;0,600;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
 
         body { background-color: #09090b; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
 
@@ -562,40 +572,93 @@
 
     <div class="sec" id="ih-fonts">
       <h2>Font Choices</h2>
-      <p>In <strong>Style mode</strong>, select a field and use the <strong>Font</strong> dropdown in the toolbar to change its typeface. The table below summarises each option:</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;">
+      <p>In <strong>Style mode</strong>, select a field and use the <strong>Font</strong> dropdown in the toolbar to change its typeface. Fonts are grouped by theme and tagged by role — when you pick a font the toolbar shows a colour-coded hint: <span style="color:#22c55e;font-weight:700;">green = Body</span>, <span style="color:#818cf8;font-weight:700;">purple = Title</span>, <span style="color:#f59e0b;font-weight:700;">amber = Flavor</span>.</p>
+
+      <p style="margin-top:10px;font-size:11px;color:#71717a;"><strong style="color:#a1a1aa;">Body</strong> — readable at small sizes for rules and card descriptions. <strong style="color:#a1a1aa;">Title</strong> — decorative and bold, best for card names at larger sizes. <strong style="color:#a1a1aa;">Flavor</strong> — elegant and lightweight, ideal for italicised lore or quote text.</p>
+
+      <table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:12px;">
         <thead>
           <tr style="border-bottom:1px solid #3f3f46;">
-            <th style="text-align:left;padding:6px 8px 8px 0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Font Option</th>
-            <th style="text-align:left;padding:6px 8px 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Best For</th>
-            <th style="text-align:left;padding:6px 8px 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">"Vibe"</th>
-            <th style="text-align:left;padding:6px 0 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Print Reliability</th>
+            <th style="text-align:left;padding:6px 8px 8px 0;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Font</th>
+            <th style="text-align:left;padding:6px 8px 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Role</th>
+            <th style="text-align:left;padding:6px 0 8px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#71717a;">Notes</th>
           </tr>
         </thead>
         <tbody>
+          <tr style="background:#18181b;"><td colspan="3" style="padding:6px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#f97316;">General</td></tr>
           <tr style="border-bottom:1px solid #27272a;">
-            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Atkinson Hyperlegible</td>
-            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Accessibility / Default</td>
-            <td style="padding:10px 8px;color:#71717a;">Functional &amp; Clear</td>
-            <td style="padding:10px 0 10px 8px;color:#71717a;">Highest</td>
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Atkinson Hyperlegible</td>
+            <td style="padding:8px;"><span style="background:#14532d;color:#22c55e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Body</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Designed for maximum legibility; the default. Great for accessibility.</td>
           </tr>
           <tr style="border-bottom:1px solid #27272a;">
-            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Libre Baskerville</td>
-            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Fantasy / Traditional</td>
-            <td style="padding:10px 8px;color:#71717a;">Scholarly &amp; Epic</td>
-            <td style="padding:10px 0 10px 8px;color:#71717a;">High</td>
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Inter Tight</td>
+            <td style="padding:8px;"><span style="background:#14532d;color:#22c55e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Body</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Clean and neutral. Fits any theme without adding strong genre flavour.</td>
           </tr>
           <tr style="border-bottom:1px solid #27272a;">
-            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Archivo Narrow</td>
-            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Complex Rules / Wordy Cards</td>
-            <td style="padding:10px 8px;color:#71717a;">Industrial &amp; Tight</td>
-            <td style="padding:10px 0 10px 8px;color:#71717a;">Medium-High</td>
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Lato</td>
+            <td style="padding:8px;"><span style="background:#1e1b4b;color:#818cf8;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Title</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Versatile and balanced. Works well for card names across any genre.</td>
           </tr>
           <tr style="border-bottom:1px solid #27272a;">
-            <td style="padding:10px 8px 10px 0;color:#d4d4d8;font-weight:700;">Inter Tight</td>
-            <td style="padding:10px 8px;color:#d4d4d8;font-weight:700;">Modern / Sci-Fi</td>
-            <td style="padding:10px 8px;color:#71717a;">Sleek &amp; Techy</td>
-            <td style="padding:10px 0 10px 8px;color:#71717a;">High</td>
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Source Sans 3</td>
+            <td style="padding:8px;"><span style="background:#451a03;color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Flavor</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Light and refined. Reads beautifully in italic for lore or quote text.</td>
+          </tr>
+
+          <tr style="background:#18181b;"><td colspan="3" style="padding:6px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#f97316;">Fantasy</td></tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Libre Baskerville</td>
+            <td style="padding:8px;"><span style="background:#14532d;color:#22c55e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Body</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Scholarly and classic. Excellent for rules text on traditional fantasy cards.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Crimson Pro</td>
+            <td style="padding:8px;"><span style="background:#14532d;color:#22c55e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Body</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Elegant serif. Legible at small sizes with a refined, literary feel.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Noto Serif</td>
+            <td style="padding:8px;"><span style="background:#451a03;color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Flavor</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Neutral and dependable. Great for italicised flavor quotes in fantasy decks.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Playfair Display</td>
+            <td style="padding:8px;"><span style="background:#1e1b4b;color:#818cf8;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Title</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">High contrast and dramatic. A go-to for dark fantasy or gothic card names.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Cinzel</td>
+            <td style="padding:8px;"><span style="background:#1e1b4b;color:#818cf8;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Title</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Roman inscription style. Popular in fantasy card games for epic card names.</td>
+          </tr>
+
+          <tr style="background:#18181b;"><td colspan="3" style="padding:6px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#f97316;">Sci-Fi</td></tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Archivo Narrow</td>
+            <td style="padding:8px;"><span style="background:#14532d;color:#22c55e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Body</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Compact and efficient. Great for dense rules text on techy or industrial cards.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Exo 2</td>
+            <td style="padding:8px;"><span style="background:#14532d;color:#22c55e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Body</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Slightly angular and futuristic. Stays very readable even at small sizes.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Josefin Sans</td>
+            <td style="padding:8px;"><span style="background:#451a03;color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Flavor</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Geometric and minimal. Gives sci-fi flavor text a sleek, designed look.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Orbitron</td>
+            <td style="padding:8px;"><span style="background:#1e1b4b;color:#818cf8;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Title</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Iconic space-age look. Best at large sizes for card names — avoid body text.</td>
+          </tr>
+          <tr style="border-bottom:1px solid #27272a;">
+            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Audiowide</td>
+            <td style="padding:8px;"><span style="background:#1e1b4b;color:#818cf8;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Title</span></td>
+            <td style="padding:8px 0 8px 8px;color:#71717a;">Rounded and futuristic. Works across cyberpunk, space opera, and tech themes.</td>
           </tr>
         </tbody>
       </table>
@@ -768,24 +831,51 @@
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
                 <input type="range" id="fontSizeSlider" min="8" max="100" value="16" class="w-14 accent-orange-500">
-                <span id="fontSizeDisplay" class="text-[9px] font-mono font-bold text-zinc-300 w-6 text-center">16</span>
+                <input type="number" id="fontSizeDisplay" min="8" max="100" value="16" class="text-[9px] font-mono font-bold text-zinc-300 w-8 text-center bg-zinc-900 border border-zinc-700 rounded px-0.5 outline-none focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
             </div>
             <div class="w-6 h-6 rounded border border-zinc-700 relative shrink-0 overflow-hidden" title="Font color">
                 <input type="color" id="fontColorPicker" value="#000000" class="absolute -inset-2 w-10 h-10 bg-transparent border-none cursor-pointer">
             </div>
             <div class="flex flex-col shrink-0 border-l border-zinc-800 pl-2">
                 <span class="text-[6px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Font</span>
+                <div style="display:flex;flex-direction:column;gap:2px;">
                 <select id="fontFamilySelect" class="bg-zinc-950 border border-zinc-700 text-[8px] font-bold text-zinc-200 rounded px-1 py-0.5 outline-none focus:border-orange-500 transition-colors w-36">
-                    <option value="'Atkinson Hyperlegible', sans-serif">Atkinson Hyperlegible</option>
-                    <option value="'Libre Baskerville', serif">Libre Baskerville</option>
-                    <option value="'Archivo Narrow', sans-serif">Archivo Narrow</option>
-                    <option value="'Inter Tight', sans-serif">Inter Tight</option>
+                    <optgroup label="── General ──">
+                        <option value="'Atkinson Hyperlegible', sans-serif" data-role="Body" data-genre="General">Atkinson Hyperlegible (Body)</option>
+                        <option value="'Inter Tight', sans-serif" data-role="Body" data-genre="General">Inter Tight (Body)</option>
+                        <option value="'Lato', sans-serif" data-role="Title" data-genre="General">Lato (Title)</option>
+                        <option value="'Source Sans 3', sans-serif" data-role="Flavor" data-genre="General">Source Sans 3 (Flavor)</option>
+                    </optgroup>
+                    <optgroup label="── Fantasy ──">
+                        <option value="'Libre Baskerville', serif" data-role="Body" data-genre="Fantasy">Libre Baskerville (Body)</option>
+                        <option value="'Crimson Pro', serif" data-role="Body" data-genre="Fantasy">Crimson Pro (Body)</option>
+                        <option value="'Noto Serif', serif" data-role="Flavor" data-genre="Fantasy">Noto Serif (Flavor)</option>
+                        <option value="'Playfair Display', serif" data-role="Title" data-genre="Fantasy">Playfair Display (Title)</option>
+                        <option value="'Cinzel', serif" data-role="Title" data-genre="Fantasy">Cinzel (Title)</option>
+                    </optgroup>
+                    <optgroup label="── Sci-Fi ──">
+                        <option value="'Archivo Narrow', sans-serif" data-role="Body" data-genre="Sci-Fi">Archivo Narrow (Body)</option>
+                        <option value="'Exo 2', sans-serif" data-role="Body" data-genre="Sci-Fi">Exo 2 (Body)</option>
+                        <option value="'Josefin Sans', sans-serif" data-role="Flavor" data-genre="Sci-Fi">Josefin Sans (Flavor)</option>
+                        <option value="'Orbitron', sans-serif" data-role="Title" data-genre="Sci-Fi">Orbitron (Title)</option>
+                        <option value="'Audiowide', sans-serif" data-role="Title" data-genre="Sci-Fi">Audiowide (Title)</option>
+                    </optgroup>
                 </select>
+                <div id="fontHint" style="font-size:8px;color:#f97316;font-weight:700;letter-spacing:0.05em;min-height:10px;"></div>
+                </div>
             </div>
             <div class="flex gap-0.5 shrink-0 border-l border-zinc-800 pl-2">
                 <button id="btnAlignLeft"   class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
                 <button id="btnAlignCenter" class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="2.5" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
                 <button id="btnAlignRight"  class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="4" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
+            </div>
+            <div class="flex flex-col shrink-0 border-l border-zinc-800 pl-2">
+                <span class="text-[6px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Rotate °</span>
+                <div class="flex items-center gap-1">
+                    <button id="btnRot90ccw" class="align-btn" title="Rotate 90° counter-clockwise" style="width:22px;height:22px;font-size:13px;">↺</button>
+                    <input type="number" id="rotationDisplay" min="-360" max="360" value="0" class="text-[9px] font-mono font-bold text-zinc-300 w-10 text-center bg-zinc-900 border border-zinc-700 rounded px-0.5 outline-none focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                    <button id="btnRot90cw"  class="align-btn" title="Rotate 90° clockwise"         style="width:22px;height:22px;font-size:13px;">↻</button>
+                </div>
             </div>
         </div>
     </div>
@@ -796,7 +886,7 @@
             <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Art Scale</span>
             <div class="flex items-center gap-2">
                 <input type="range" id="artScaleSlider" min="50" max="300" value="100" class="w-28 accent-orange-500">
-                <span id="artScaleDisplay" class="text-[9px] font-mono font-bold text-orange-400 w-8">100%</span>
+                <input type="number" id="artScaleDisplay" min="50" max="300" value="100" class="text-[9px] font-mono font-bold text-orange-400 w-10 text-center bg-zinc-900 border border-zinc-700 rounded px-0.5 outline-none focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
             </div>
         </div>
         <div class="flex flex-col gap-1 shrink-0">
@@ -1263,16 +1353,27 @@ function syncArtSlider() {
     const t = getArtTransform(currentIndex);
     const pct = Math.round(t.scale * 100);
     artScaleSlider.value = pct;
-    artScaleDisplay.textContent = pct + '%';
+    artScaleDisplay.value = pct;
 }
 
 artScaleSlider.addEventListener('input', () => {
     const t = getArtTransform(currentIndex);
     t.scale = parseInt(artScaleSlider.value) / 100;
-    artScaleDisplay.textContent = artScaleSlider.value + '%';
+    artScaleDisplay.value = artScaleSlider.value;
     render();
 });
 artScaleSlider.addEventListener('change', () => saveSnapshot());
+artScaleDisplay.addEventListener('change', () => {
+    let v = parseInt(artScaleDisplay.value);
+    if (isNaN(v)) return;
+    v = Math.max(50, Math.min(300, v));
+    artScaleDisplay.value = v;
+    artScaleSlider.value = v;
+    const t = getArtTransform(currentIndex);
+    t.scale = v / 100;
+    render();
+    saveSnapshot();
+});
 
 document.getElementById('artResetBtn').addEventListener('click', () => {
     artTransforms[currentIndex] = defaultArtTransform();
@@ -1363,15 +1464,31 @@ function renderArtLibrary() {
 
         entry.addEventListener('click', (e) => {
             if (e.target.matches('input') || e.target.matches('button')) return;
-            if (artAssignments[currentIndex] === art.id) delete artAssignments[currentIndex];
-            else artAssignments[currentIndex] = art.id;
+            if (artAssignments[currentIndex] === art.id) {
+                unassignArtFromCard(currentIndex);
+            } else {
+                assignArtToCard(currentIndex, art);
+            }
             renderArtLibrary(); render(); saveSnapshot();
         });
 
         entry.querySelector('.art-name-input').addEventListener('input', (e) => {
+            const newName = e.target.value;
             const idx = artLibrary.findIndex(a => a.id === art.id);
-            if (idx !== -1) artLibrary[idx].name = e.target.value.trim();
+            if (idx !== -1) artLibrary[idx].name = newName;
+            // Update art column in data rows that reference this art by its old name
+            // (we do a live sync so the column stays in step as user types)
+            syncArtColumnForArt(art.id, newName);
             render();
+        });
+        entry.querySelector('.art-name-input').addEventListener('change', (e) => {
+            // On blur/commit, also update the sidebar preview name
+            const assignedId = artAssignments[currentIndex];
+            if (assignedId === art.id) {
+                const nameEl = document.getElementById('currentArtName');
+                if (nameEl) nameEl.textContent = e.target.value;
+            }
+            saveSnapshot();
         });
 
         entry.querySelector('.art-delete-btn').addEventListener('click', (e) => {
@@ -1383,6 +1500,60 @@ function renderArtLibrary() {
 
         list.appendChild(entry);
     });
+}
+
+// ── Art column helpers ────────────────────────────────────────────────────────
+// Returns the name of the art column header (art / image / artwork), or null.
+function getArtColumnHeader() {
+    return headers.find(h => /^(art|image|artwork)$/i.test(h.trim())) || null;
+}
+
+// Ensures an 'Art' column exists; if not, creates it and fills all rows with ''.
+// Returns the header name.
+function ensureArtColumn() {
+    let col = getArtColumnHeader();
+    if (!col) {
+        col = 'Art';
+        headers.push(col);
+        data.forEach(row => { if (row[col] === undefined) row[col] = ''; });
+        // Create a hidden field config for it (art column never renders on card)
+        document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
+    }
+    return col;
+}
+
+// Sync art column value for every card that has artId assigned.
+// Called when user renames an art entry.
+function syncArtColumnForArt(artId, newName) {
+    if (!headers.length) return; // no spreadsheet loaded
+    const col = getArtColumnHeader();
+    if (!col) return; // no art column — don't auto-create on rename, only on assign
+    for (const [idxStr, assignedId] of Object.entries(artAssignments)) {
+        if (assignedId === artId) {
+            const idx = parseInt(idxStr);
+            if (data[idx] && !isCardBack(idx)) {
+                data[idx][col] = newName;
+            }
+        }
+    }
+}
+
+// Assign art to a card AND write its name into the art column (creating the column if needed).
+function assignArtToCard(cardIdx, artEntry) {
+    artAssignments[cardIdx] = artEntry.id;
+    if (headers.length > 0 && !isCardBack(cardIdx)) {
+        const col = ensureArtColumn();
+        data[cardIdx][col] = artEntry.name;
+    }
+}
+
+// Unassign art from a card AND clear the art column value.
+function unassignArtFromCard(cardIdx) {
+    delete artAssignments[cardIdx];
+    if (headers.length > 0 && !isCardBack(cardIdx)) {
+        const col = getArtColumnHeader();
+        if (col && data[cardIdx]) data[cardIdx][col] = '';
+    }
 }
 
 function handleArtFiles(files) {
@@ -1638,7 +1809,7 @@ function openInlineEditor(header) {
     const ed = document.createElement('div');
     ed.contentEditable = 'true'; ed.spellcheck = false; ed.dataset.header = header;
     ed.className = `inline-editor align-${alignment}`;
-    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};`;
+    ed.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;min-height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};transform:rotate(${conf.rotation||0}deg);transform-origin:center center;`;
     ed.innerHTML = getRichHTML(currentIndex, header);
     ed.addEventListener('input', () => { commitEditorToStore(); positionMiniBar(); });
     ed.addEventListener('keydown', handleEditorKeydown);
@@ -1868,7 +2039,8 @@ function render(forExport = false) {
         div.className = `dynamic-field align-${alignment}`;
         div.dataset.field = h;
         if (forExport) div.classList.add('export-nudge');
-        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};`;
+        const rot = conf.rotation || 0;
+        div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};transform:rotate(${rot}deg);transform-origin:center center;`;
         const span = document.createElement('span');
         span.className = 'field-rich-content'; span.innerHTML = richHTML;
         div.appendChild(span); fieldsContainer.appendChild(div);
@@ -1876,7 +2048,7 @@ function render(forExport = false) {
         if (isEditMode && !forExport) {
             const interact = document.createElement('div');
             interact.className = `interaction-box ${selectedHeader === h ? 'active-field' : ''}`;
-            interact.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;`;
+            interact.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;transform:rotate(${rot}deg);transform-origin:center center;`;
             interact.setAttribute('data-header', h);
             if (selectedHeader === h) {
                 const r = document.createElement('div'); r.className = 'resize-handle'; r.setAttribute('data-type', 'resize'); interact.appendChild(r);
@@ -1994,11 +2166,14 @@ function updateToolbarUI() {
         sc.classList.remove('hidden');
         const conf = getConfigByScope(selectedHeader);
         document.getElementById('fontSizeSlider').value = conf.fontSize;
-        document.getElementById('fontSizeDisplay').textContent = `${conf.fontSize}`;
+        document.getElementById('fontSizeDisplay').value = conf.fontSize;
         document.getElementById('fontColorPicker').value = conf.color;
         updateAlignButtons(conf.textAlign || 'center');
-        document.getElementById('fontFamilySelect').value = conf.fontFamily || "'Atkinson Hyperlegible', sans-serif";
+        const ffs = document.getElementById('fontFamilySelect');
+        ffs.value = conf.fontFamily || "'Atkinson Hyperlegible', sans-serif";
+        (function(){ const opt = ffs.options[ffs.selectedIndex]; const hint = document.getElementById('fontHint'); if(hint && opt){ const role=opt.getAttribute('data-role')||''; const genre=opt.getAttribute('data-genre')||''; if(role&&genre){ const rc={'Body':'#22c55e','Title':'#818cf8','Flavor':'#f59e0b'}; hint.style.color=rc[role]||'#f97316'; hint.textContent=genre+' · Best for: '+role+' text'; } else hint.textContent=''; } })();
         document.getElementById('btnUnderline').classList.toggle('active', conf.textDecoration === 'underline');
+        document.getElementById('rotationDisplay').value = conf.rotation || 0;
     } else { sc.classList.add('hidden'); }
     const hint = document.getElementById('modeHint');
     if (hint) {
@@ -2006,7 +2181,7 @@ function updateToolbarUI() {
             hint.textContent = '◈ Select a Target scope before making changes';
             hint.style.color = '#a78bfa';
         } else if (isStyleMode) {
-            hint.textContent = '✦ Style mode — dbl-click to edit & select text for B/I/U';
+            hint.textContent = '✦ Style mode — drag to move, dbl-click to edit text';
             hint.style.color = '#f97316';
         } else {
             hint.textContent = '▶ Move mode — toggle Style for more options';
@@ -2024,6 +2199,31 @@ function updateAlignButtons(a) {
 document.getElementById('btnAlignLeft').onclick   = () => saveAlignChange('left');
 document.getElementById('btnAlignCenter').onclick = () => saveAlignChange('center');
 document.getElementById('btnAlignRight').onclick  = () => saveAlignChange('right');
+
+// Rotation controls
+document.getElementById('rotationDisplay').onchange = (e) => {
+    let v = parseInt(e.target.value);
+    if (isNaN(v)) v = 0;
+    v = ((v % 360) + 360) % 360; // normalise to 0-359
+    e.target.value = v;
+    saveStyleChange('rotation', v); saveSnapshot();
+};
+document.getElementById('rotationDisplay').oninput = (e) => {
+    let v = parseInt(e.target.value);
+    if (!isNaN(v)) saveStyleChange('rotation', v);
+};
+document.getElementById('btnRot90ccw').onclick = () => {
+    const cur = parseInt(document.getElementById('rotationDisplay').value) || 0;
+    const nv = ((cur - 90) + 360) % 360;
+    document.getElementById('rotationDisplay').value = nv;
+    saveStyleChange('rotation', nv); saveSnapshot();
+};
+document.getElementById('btnRot90cw').onclick = () => {
+    const cur = parseInt(document.getElementById('rotationDisplay').value) || 0;
+    const nv = (cur + 90) % 360;
+    document.getElementById('rotationDisplay').value = nv;
+    saveStyleChange('rotation', nv); saveSnapshot();
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DRAG / RESIZE (text fields)
@@ -2051,9 +2251,8 @@ interactionLayer.addEventListener('pointerdown', (e) => {
         }
         selectedHeader = header; updateToolbarUI();
     }
-    if (isStyleMode && type === 'drag') return;
     const currentConf = getConfigByScope(header);
-    dragInfo = { active: true, type, header, startX: e.clientX, startY: e.clientY, initialConfig: JSON.parse(JSON.stringify(currentConf)) };
+    dragInfo = { active: true, type, header, startX: e.clientX, startY: e.clientY, initialConfig: JSON.parse(JSON.stringify(currentConf)), moved: false };
     interactionLayer.setPointerCapture(e.pointerId);
 });
 
@@ -2071,13 +2270,15 @@ interactionLayer.addEventListener('pointermove', (e) => {
         t = profileStyleOverrides[pVal][dragInfo.header];
     } else { t = fieldConfigs[dragInfo.header]; }
     const dx = e.clientX - dragInfo.startX, dy = e.clientY - dragInfo.startY;
+    if (!dragInfo.moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return; // threshold: ignore micro-jitter
+    dragInfo.moved = true;
     if (dragInfo.type === 'drag') { t.top = Math.round(dragInfo.initialConfig.top + dy); t.left = Math.round(dragInfo.initialConfig.left + dx); }
     else { t.width = Math.max(10, Math.round(dragInfo.initialConfig.width + dx)); t.height = Math.max(10, Math.round(dragInfo.initialConfig.height + dy)); }
     render();
 });
 
 interactionLayer.addEventListener('pointerup', (e) => {
-    if (dragInfo.active) { dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); saveSnapshot(); }
+    if (dragInfo.active) { const didMove = dragInfo.moved; dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); if (didMove) saveSnapshot(); }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2099,14 +2300,36 @@ function saveStyleChange(key, value) {
     target[key] = value; render();
 }
 
-document.getElementById('fontSizeSlider').oninput = (e) => { document.getElementById('fontSizeDisplay').textContent = e.target.value; saveStyleChange('fontSize', parseInt(e.target.value)); };
+document.getElementById('fontSizeSlider').oninput = (e) => { document.getElementById('fontSizeDisplay').value = e.target.value; saveStyleChange('fontSize', parseInt(e.target.value)); };
 document.getElementById('fontSizeSlider').onchange = () => saveSnapshot();
+document.getElementById('fontSizeDisplay').onchange = (e) => {
+    let v = parseInt(e.target.value);
+    if (isNaN(v)) return;
+    v = Math.max(8, Math.min(100, v));
+    e.target.value = v;
+    document.getElementById('fontSizeSlider').value = v;
+    saveStyleChange('fontSize', v);
+    saveSnapshot();
+};
 document.getElementById('fontColorPicker').oninput = (e) => saveStyleChange('color', e.target.value);
 document.getElementById('fontColorPicker').onchange = () => saveSnapshot();
 document.getElementById('btnBold').onclick   = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontWeight', c.fontWeight === 700 ? 400 : 700); saveSnapshot(); };
 document.getElementById('btnItalic').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('fontStyle', c.fontStyle === 'italic' ? 'normal' : 'italic'); saveSnapshot(); };
 document.getElementById('btnUnderline').onclick = () => { const c = getConfigByScope(selectedHeader); saveStyleChange('textDecoration', c.textDecoration === 'underline' ? 'none' : 'underline'); saveSnapshot(); };
-document.getElementById('fontFamilySelect').onchange = (e) => { saveStyleChange('fontFamily', e.target.value); saveSnapshot(); };
+document.getElementById('fontFamilySelect').onchange = (e) => {
+    saveStyleChange('fontFamily', e.target.value);
+    saveSnapshot();
+    const sel = e.target;
+    const opt = sel.options[sel.selectedIndex];
+    const role = opt.getAttribute('data-role') || '';
+    const genre = opt.getAttribute('data-genre') || '';
+    const hint = document.getElementById('fontHint');
+    if (hint && role && genre) {
+        const roleColors = { 'Body': '#22c55e', 'Title': '#818cf8', 'Flavor': '#f59e0b' };
+        hint.style.color = roleColors[role] || '#f97316';
+        hint.textContent = genre + ' · Best for: ' + role + ' text';
+    } else if (hint) { hint.textContent = ''; }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EVENT WIRING
@@ -4099,10 +4322,10 @@ async function importTTSSheets(files) {
         // Track whether this was a fresh project before import
         const wasFreshProject = headers.length === 0;
 
-        // Make sure headers exist — TTS-imported rows use Name
+        // Make sure headers exist — TTS-imported rows use Name + Art
         if (!headers.length) {
-            headers = ['Name'];
-            document.getElementById('dataScopeLabel').textContent = '1 COLUMN';
+            headers = ['Name', 'Art'];
+            document.getElementById('dataScopeLabel').textContent = '2 COLUMNS';
             document.getElementById('fileNameLabel').textContent = '(TTS Import)';
             document.getElementById('dataLoadedName').textContent = `${totalImported} TTS cards`;
             document.getElementById('dataLoadedRow').classList.remove('hidden');
@@ -4113,12 +4336,26 @@ async function importTTSSheets(files) {
                 ` + ${totalImported} TTS cards`;
         }
 
+        // Ensure Art column exists in headers + data rows, then fill art names
+        if (totalImported > 0) {
+            const artCol = ensureArtColumn();
+            document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
+            // Fill the art column for every card that has an art assignment and was just imported
+            for (const [idxStr, assignedId] of Object.entries(artAssignments)) {
+                const idx = parseInt(idxStr);
+                if (data[idx] && !isCardBack(idx) && data[idx].__ttsImport) {
+                    const artEntry = artLibrary.find(a => a.id === assignedId);
+                    if (artEntry) data[idx][artCol] = artEntry.name;
+                }
+            }
+        }
+
         // Ensure fieldConfigs entries exist for all headers before render
         // For TTS imports, hide the Name field — cards are image-only
-        const wasTTSOnlyProject = !headers.length;
+        // Art column is always hidden (never renders on card face)
         headers.forEach((h, i) => {
             if (!fieldConfigs[h]) fieldConfigs[h] = {
-                visible: h === 'Name' ? false : true,
+                visible: (h === 'Name' || /^(art|image|artwork)$/i.test(h)) ? false : true,
                 top: 60 + i * 60, left: 25, width: 325, height: 45,
                 fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center',
                 fontFamily: "'Atkinson Hyperlegible', sans-serif"
@@ -4128,6 +4365,14 @@ async function importTTSSheets(files) {
         if (wasFreshProject && fieldConfigs['Name']) {
             fieldConfigs['Name'].visible = false;
         }
+
+        // Rebuild trigger column dropdown to reflect all current headers
+        triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
+        headers.forEach(h => {
+            const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
+            triggerColSelect.appendChild(opt);
+        });
+        triggerColSelect.classList.remove('hidden');
 
         populateSelector();
         updateTemplateLibrary();
