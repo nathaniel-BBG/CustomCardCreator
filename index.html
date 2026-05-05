@@ -371,9 +371,128 @@
         }
         .acm-select:focus { border-color: #f97316; }
         .acm-select option { background: #18181b; }
+
+        /* ═══════════════════════════════════════════════════════
+           MOBILE RESPONSIVE STYLES
+           ═══════════════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+
+            /* Allow body to scroll on mobile */
+            body { overflow: auto; flex-direction: column; height: auto; min-height: 100vh; }
+
+            /* ── Main layout: stack vertically ── */
+            #workspace {
+                overflow-y: visible;
+                overflow-x: hidden;
+                height: auto;
+                padding: 12px 0 20px 0;
+                order: 1;
+                flex: none;
+            }
+
+            /* ── Header ── */
+            #workspace > .w-full.max-w-4xl {
+                padding: 0 12px;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            #workspace h1 { font-size: 1.4rem; }
+
+            /* Header controls: wrap tightly */
+            #workspace .flex.items-center.gap-4 {
+                gap: 6px;
+                flex-wrap: wrap;
+            }
+            .header-toggle-btn { padding: 5px 9px; font-size: 9px; }
+
+            /* ── Format toolbar: make it scrollable horizontally ── */
+            #formatToolbar, #artEditPanel {
+                max-width: calc(100vw - 24px);
+                overflow-x: auto;
+                flex-wrap: nowrap !important;
+                -webkit-overflow-scrolling: touch;
+                margin-bottom: 8px;
+            }
+
+            /* ── Card Back Banner: match card width ── */
+            #cardBackBanner { width: auto; max-width: calc(100vw - 24px); }
+
+            /* ── Card Preview: scale down to fit screen ── */
+            .card-container {
+                transform-origin: top center;
+            }
+            #cardPreview {
+                transform-origin: top center;
+            }
+
+            /* ── Export button area ── */
+            #exportSplitWrap { flex-wrap: wrap; }
+
+            /* ── Save/load row: wrap ── */
+            #workspace .flex.items-center.gap-3.mt-2 {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            #workspace .flex.items-center.gap-3.mt-2 button {
+                font-size: 9px;
+                padding: 8px 12px;
+            }
+
+            /* ── Sidebar: move below main content, full width ── */
+            .sidebar {
+                width: 100% !important;
+                height: auto !important;
+                border-left: none;
+                border-top: 1px solid #27272a;
+                order: 2;
+            }
+
+            /* ── Modals: full-width on mobile ── */
+            #addCardModalBox,
+            #editCardModal > div,
+            #reorderModalBox {
+                width: calc(100vw - 32px) !important;
+                max-width: 420px;
+                padding: 20px;
+            }
+
+            /* ── Instructions panel ── */
+            #iP .bar { padding: 11px 16px; }
+            #iP .body { padding: 24px 16px 60px; }
+
+            /* ── Art library panel ── */
+            #aLP .alp-bar { padding: 11px 16px; }
+            #aLP .alp-body { padding: 24px 16px 60px; }
+
+            /* ── Nav controls at bottom of sidebar ── */
+            .sidebar > div:last-child {
+                position: static;
+            }
+
+            /* ── Touch-friendly tap targets ── */
+            #prevBtn, #nextBtn, #addCardBtn, #editCardBtn {
+                min-height: 44px;
+            }
+            .toolbar-btn { min-height: 30px; min-width: 30px; }
+
+            /* ── Project name row ── */
+            #workspace .flex.items-center.gap-2.mt-4 {
+                padding: 0 12px;
+                max-width: 100%;
+            }
+        }
+
+        /* Card scaling JS hook — set via JS on mobile */
+        #cardPreviewWrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
-<body class="flex h-screen">
+<body class="flex h-screen" id="appBody">
 
 <!-- Add Blank Card Modal -->
 <div id="addCardModal">
@@ -904,6 +1023,7 @@
     </div>
 
     <!-- Card Back Banner (shown only when on the card back) -->
+    <div id="cardPreviewWrapper">
     <div id="cardBackBanner">
         <svg class="cb-icon" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M7 8h10M7 12h6"/></svg>
         <div class="flex flex-col gap-0.5 flex-1">
@@ -963,6 +1083,7 @@
             </div>
         </div>
     </div>
+    </div><!-- /cardPreviewWrapper -->
 
     <!-- Project Name -->
     <div class="flex items-center gap-2 mt-4">
@@ -4612,6 +4733,120 @@ function isSlotBlank(ctx, x, y, w, h) {
 
 // Seed the initial empty snapshot so undo never goes below a clean state
 saveSnapshot();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOBILE RESPONSIVE: card scaling + sidebar drawer toggle
+// ─────────────────────────────────────────────────────────────────────────────
+(function() {
+    const CARD_W = 375;
+    const CARD_H = 525;
+
+    function isMobile() { return window.innerWidth <= 768; }
+
+    function scaleCard() {
+        if (!isMobile()) {
+            // Reset on desktop
+            const card = document.getElementById('cardPreview');
+            if (card) { card.style.transform = ''; card.style.marginBottom = ''; }
+            const wrapper = document.getElementById('cardPreviewWrapper');
+            if (wrapper) { wrapper.style.minHeight = ''; wrapper.style.paddingBottom = ''; }
+            return;
+        }
+        const padding = 24; // px each side
+        const available = window.innerWidth - padding;
+        const scale = Math.min(1, available / CARD_W);
+        const card = document.getElementById('cardPreview');
+        if (!card) return;
+        card.style.transform = `scale(${scale})`;
+        card.style.transformOrigin = 'top center';
+        // Compensate for the visual space lost when scaling down
+        const scaledH = CARD_H * scale;
+        const offset = CARD_H - scaledH;
+        card.style.marginBottom = `-${offset}px`;
+        // Banner width
+        const banner = document.getElementById('cardBackBanner');
+        if (banner) { banner.style.width = `${available}px`; }
+    }
+
+    // Add a collapsible sidebar toggle button on mobile
+    function buildSidebarToggle() {
+        if (document.getElementById('mobileSidebarToggle')) return;
+        const btn = document.createElement('button');
+        btn.id = 'mobileSidebarToggle';
+        btn.innerHTML = '☰ Settings & Assets';
+        Object.assign(btn.style, {
+            display: 'none',
+            width: '100%',
+            padding: '14px',
+            background: '#18181b',
+            border: 'none',
+            borderTop: '1px solid #27272a',
+            color: '#a1a1aa',
+            fontSize: '11px',
+            fontWeight: '900',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            cursor: 'pointer',
+            fontFamily: "'Inter', sans-serif",
+        });
+
+        const sidebar = document.querySelector('aside.sidebar');
+        if (!sidebar) return;
+        const sidebarInner = sidebar.querySelector('div');
+
+        // Insert toggle before sidebar
+        document.body.insertBefore(btn, sidebar);
+
+        // Initially collapse on mobile
+        let sidebarOpen = false;
+        function applySidebarState() {
+            if (!isMobile()) {
+                btn.style.display = 'none';
+                sidebar.style.display = 'flex';
+                return;
+            }
+            btn.style.display = 'block';
+            if (sidebarOpen) {
+                sidebar.style.display = 'flex';
+                btn.innerHTML = '✕ Close Settings';
+                btn.style.color = '#f97316';
+            } else {
+                sidebar.style.display = 'none';
+                btn.innerHTML = '☰ Settings & Assets';
+                btn.style.color = '#a1a1aa';
+            }
+        }
+
+        btn.addEventListener('click', () => {
+            sidebarOpen = !sidebarOpen;
+            applySidebarState();
+        });
+
+        window._applySidebarState = applySidebarState;
+        applySidebarState();
+    }
+
+    function onResize() {
+        scaleCard();
+        if (window._applySidebarState) window._applySidebarState();
+    }
+
+    window.addEventListener('resize', onResize);
+    // Run after DOM ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { buildSidebarToggle(); scaleCard(); });
+    } else {
+        buildSidebarToggle();
+        scaleCard();
+    }
+
+    // Re-scale after render() since it might change layout
+    const _origRender = window.render;
+    if (typeof _origRender === 'function') {
+        // render is defined in the outer scope, patch via timeout
+        setTimeout(() => { scaleCard(); }, 100);
+    }
+})();
 </script>
 </body>
 </html>
