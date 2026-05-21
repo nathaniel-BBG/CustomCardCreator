@@ -1946,6 +1946,9 @@ function openInlineEditor(header) {
     document.getElementById('cardPreview').appendChild(ed);
     document.getElementById('cardPreview').appendChild(miniBar);
     miniBar.style.position = 'absolute';
+    // Hide the underlying field so it doesn't show through the editor
+    const bgField = document.querySelector(`[data-field="${header}"]`);
+    if (bgField) bgField.style.visibility = 'hidden';
     activeEditor = ed; ed.focus();
     try {
         const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false);
@@ -2305,7 +2308,7 @@ function updateToolbarUI() {
             hint.textContent = '✦ Style mode — drag to move, dbl-click to edit text';
             hint.style.color = '#f97316';
         } else {
-            hint.textContent = '▶ Move mode — toggle Style for more options';
+            hint.textContent = '▶ Move mode — dbl-click a field to edit text';
             hint.style.color = '#60a5fa';
         }
     }
@@ -2350,11 +2353,16 @@ document.getElementById('btnRot90cw').onclick = () => {
 // DRAG / RESIZE (text fields)
 // ─────────────────────────────────────────────────────────────────────────────
 interactionLayer.addEventListener('dblclick', (e) => {
-    if (!isEditMode || !isStyleMode) return;
-    const target = e.target.closest('.interaction-box');
-    if (!target || e.target.getAttribute('data-type') === 'resize') return;
-    selectedHeader = target.getAttribute('data-header');
+    if (!isEditMode) return;
+    // e.target may be the layer itself due to setPointerCapture — use selectedHeader set by pointerdown instead
+    if (!selectedHeader) return;
+    if (dragInfo.moved) return; // was a drag, not a dblclick
     dragInfo.active = false;
+    if (!isStyleMode) {
+        isStyleMode = true;
+        document.getElementById('modeToggle').checked = true;
+        updateToolbarUI();
+    }
     openInlineEditor(selectedHeader);
 });
 
@@ -2399,7 +2407,13 @@ interactionLayer.addEventListener('pointermove', (e) => {
 });
 
 interactionLayer.addEventListener('pointerup', (e) => {
-    if (dragInfo.active) { const didMove = dragInfo.moved; dragInfo.active = false; interactionLayer.releasePointerCapture(e.pointerId); render(); if (didMove) saveSnapshot(); }
+    if (dragInfo.active) {
+        const didMove = dragInfo.moved;
+        dragInfo.active = false;
+        interactionLayer.releasePointerCapture(e.pointerId);
+        if (didMove) { render(); saveSnapshot(); }
+        // If no move, skip render so dblclick can still find its target element
+    }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4846,6 +4860,34 @@ saveSnapshot();
         // render is defined in the outer scope, patch via timeout
         setTimeout(() => { scaleCard(); }, 100);
     }
+
+    // ── DEBUG: inject test data so dbl-click can be tested without a CSV ──
+    setTimeout(() => {
+        if (!data.length) {
+            headers = ['Name', 'Type', 'Description'];
+            data = [{ Name: 'Test Card', Type: 'Action', Description: 'Double-click me to edit!' }];
+            document.getElementById('dataScopeLabel').textContent = '3 COLUMNS';
+            document.getElementById('fileNameLabel').textContent = '(test data)';
+            document.getElementById('dataLoadedName').textContent = 'test-data (debug)';
+            document.getElementById('dataLoadedRow').classList.remove('hidden');
+            triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
+            headers.forEach((h, i) => {
+                const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
+                triggerColSelect.appendChild(opt);
+            });
+            triggerColSelect.classList.remove('hidden');
+            headers.forEach((h, i) => {
+                fieldConfigs[h] = {
+                    visible: true, top: 60 + i * 80, left: 25, width: 325, height: 55,
+                    fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center'
+                };
+            });
+            currentIndex = 0;
+            ensureCardBack();
+            populateSelector();
+            render();
+        }
+    }, 300);
 })();
 </script>
 </body>
