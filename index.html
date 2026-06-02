@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect v26</title>
+    <title>Card Architect v46</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -15,7 +15,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
@@ -157,8 +156,8 @@
             position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000;
             display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px);
         }
-        /* export-nudge removed - was causing text shift/clip during PNG capture */
-        .export-nudge { transform: translateY(-15px); }
+        /* export-nudge removed - was causing text shift during PNG capture */
+        .export-nudge { /* no-op */ }
 
         /* ── Art Asset Library ── */
         .art-asset-entry {
@@ -529,6 +528,38 @@
     </div>
 </div>
 
+<!-- Replace Sheet Modal -->
+<div id="replaceSheetModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.82);backdrop-filter:blur(5px);align-items:center;justify-content:center;">
+  <div style="background:#18181b;border:1px solid #3f3f46;border-radius:16px;padding:28px;width:440px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 32px 64px rgba(0,0,0,0.7);">
+    <h2 style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:0.12em;color:#f97316;margin-bottom:6px;">Replace Spreadsheet</h2>
+    <p style="font-size:10px;color:#71717a;margin-bottom:18px;">Your layout settings will be kept. Review column changes below.</p>
+
+    <!-- New columns section -->
+    <div id="rsmNewColsSection" style="display:none;margin-bottom:14px;">
+      <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#22c55e;margin-bottom:8px;">▸ New Columns (will be added)</div>
+      <div id="rsmNewColsList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <!-- Missing columns section -->
+    <div id="rsmMissingColsSection" style="display:none;margin-bottom:14px;">
+      <div style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#f97316;margin-bottom:10px;">▸ Missing Columns (not in new sheet)</div>
+      <div id="rsmMissingColsList" style="overflow-y:auto;max-height:220px;display:flex;flex-direction:column;gap:8px;padding-right:4px;"></div>
+    </div>
+
+    <!-- No changes -->
+    <div id="rsmNoChanges" style="display:none;font-size:11px;color:#52525b;text-align:center;padding:16px 0;margin-bottom:14px;">✓ Column structure unchanged — layout will be preserved as-is.</div>
+
+    <div style="font-size:9px;color:#52525b;background:#0c0c0e;border:1px solid #27272a;border-radius:8px;padding:10px 12px;margin-bottom:18px;">
+      Card data will be replaced with the new spreadsheet. Art assignments and layout positions are kept.
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button id="rsmCancelBtn" style="flex:1;padding:10px;border-radius:10px;background:#27272a;border:1px solid #3f3f46;color:#a1a1aa;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#3f3f46';this.style.color='#fff'" onmouseout="this.style.background='#27272a';this.style.color='#a1a1aa'">Cancel</button>
+      <button id="rsmConfirmBtn" style="flex:2;padding:10px;border-radius:10px;background:#ea580c;border:1px solid #f97316;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='#f97316'" onmouseout="this.style.background='#ea580c'">Replace &amp; Keep Layout</button>
+    </div>
+  </div>
+</div>
+
 <!-- Mini floating format bar -->
 <div id="miniFormatBar">
     <button class="mini-btn" id="miniBold"      title="Bold (Ctrl+B)"><b>B</b></button>
@@ -721,7 +752,6 @@
             <td style="padding:8px 0 8px 8px;color:#71717a;">Versatile and balanced. Works well for card names across any genre.</td>
           </tr>
           <tr style="border-bottom:1px solid #27272a;">
-            <td style="padding:8px 8px 8px 0;color:#d4d4d8;font-weight:700;">Source Sans 3</td>
             <td style="padding:8px;"><span style="background:#451a03;color:#f59e0b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">Flavor</span></td>
             <td style="padding:8px 0 8px 8px;color:#71717a;">Light and refined. Reads beautifully in italic for lore or quote text.</td>
           </tr>
@@ -963,7 +993,6 @@
                         <option value="'Atkinson Hyperlegible', sans-serif" data-role="Body" data-genre="General">Atkinson Hyperlegible (Body)</option>
                         <option value="'Inter Tight', sans-serif" data-role="Body" data-genre="General">Inter Tight (Body)</option>
                         <option value="'Lato', sans-serif" data-role="Title" data-genre="General">Lato (Title)</option>
-                        <option value="'Source Sans 3', sans-serif" data-role="Flavor" data-genre="General">Source Sans 3 (Flavor)</option>
                     </optgroup>
                     <optgroup label="── Fantasy ──">
                         <option value="'Libre Baskerville', serif" data-role="Body" data-genre="Fantasy">Libre Baskerville (Body)</option>
@@ -1134,7 +1163,7 @@
             <div id="dropZoneData" class="border-2 border-dashed border-zinc-800 p-5 rounded-xl text-center cursor-pointer hover:border-orange-500 transition-colors bg-zinc-900/30">
                 <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" class="hidden">
                 <p class="text-xs text-zinc-400 font-bold uppercase tracking-tighter" id="fileNameLabel">Upload CSV/Excel</p>
-                <p class="text-[8px] text-zinc-600 mt-1">Excel rich text (bold/italic/underline) preserved</p>
+                <p class="text-[8px] text-zinc-600 mt-1">Drop a new file to replace — layout is preserved</p>
             </div>
             <!-- Loaded file info + clear -->
             <div id="dataLoadedRow" class="hidden mt-2 flex items-center justify-between bg-zinc-900/60 border border-zinc-800 rounded-lg px-3 py-2">
@@ -2162,7 +2191,7 @@ function render(forExport = false) {
         const div = document.createElement('div');
         div.className = `dynamic-field align-${alignment}`;
         div.dataset.field = h;
-        if (forExport) div.classList.add('export-nudge');
+        if (false) div.classList.add('export-nudge'); // removed: caused text shift in html2canvas
         const rot = conf.rotation || 0;
         div.style.cssText = `top:${conf.top}px;left:${conf.left}px;width:${conf.width}px;height:${conf.height}px;font-size:${conf.fontSize}px;font-weight:${conf.fontWeight};color:${conf.color};font-style:${conf.fontStyle||'normal'};font-family:${conf.fontFamily||"'Atkinson Hyperlegible', sans-serif"};text-decoration:${conf.textDecoration||'none'};transform:rotate(${rot}deg);transform-origin:center center;`;
         const span = document.createElement('span');
@@ -2470,7 +2499,10 @@ document.getElementById('fontFamilySelect').onchange = (e) => {
 // EVENT WIRING
 // ─────────────────────────────────────────────────────────────────────────────
 document.getElementById('dropZoneData').onclick      = () => document.getElementById('fileInput').click();
-document.getElementById('fileInput').onchange        = (e) => processDataFile(e.target.files[0]);
+document.getElementById('dropZoneData').addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#f97316'; });
+document.getElementById('dropZoneData').addEventListener('dragleave', (e) => { e.currentTarget.style.borderColor = ''; });
+document.getElementById('dropZoneData').addEventListener('drop', (e) => { e.preventDefault(); e.currentTarget.style.borderColor = ''; const f = e.dataTransfer.files[0]; if (f) processDataFile(f); });
+document.getElementById('fileInput').onchange        = (e) => { processDataFile(e.target.files[0]); e.target.value = ''; };
 document.getElementById('dropZoneTemplates').onclick = () => document.getElementById('templateFiles').click();
 document.getElementById('templateFiles').onchange    = (e) => { handleTemplates(e.target.files); e.target.value = ''; };
 document.getElementById('prevBtn').onclick           = () => { if (currentIndex > 0) { currentIndex--; document.getElementById('cardSelector').value = currentIndex; render(); syncAmountDisplay(); if (isArtEditMode) syncArtSlider(); } };
@@ -2865,6 +2897,95 @@ document.getElementById('clearDataBtn').addEventListener('click', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA LOADING
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Holds pending replace-sheet state while the modal is open
+let _pendingReplace = null;
+
+function _applyParsedData(file, newData, newHeaders, ws, replaceMappings) {
+    // replaceMappings: { oldHeader: newHeaderOrNull }
+    // null = leave blank, string = map from that new column
+
+    const prevHeaders = [...headers];
+    const isReplace = data.length > 0 && !!replaceMappings;
+
+    data = newData;
+    headers = newHeaders;
+
+    // Apply missing-column decisions: for each old column not in new sheet,
+    // if user chose a replacement column, copy that data; if null, leave blank (already '' from defval)
+    if (isReplace && replaceMappings) {
+        const missingOld = prevHeaders.filter(h => !newHeaders.includes(h));
+        missingOld.forEach(oldH => {
+            const mapTo = replaceMappings[oldH]; // new column name or null
+            if (mapTo && newHeaders.includes(mapTo)) {
+                // Copy mapTo values into oldH key on each row
+                data.forEach(row => { row[oldH] = row[mapTo] !== undefined ? row[mapTo] : ''; });
+                // Insert oldH into headers after mapTo position, only if not already there
+                if (!headers.includes(oldH)) {
+                    const pos = headers.indexOf(mapTo);
+                    headers.splice(pos + 1, 0, oldH);
+                }
+            } else {
+                // Leave blank — add empty column back so fieldConfig still works
+                data.forEach(row => { row[oldH] = ''; });
+                if (!headers.includes(oldH)) headers.push(oldH);
+            }
+        });
+    }
+
+    document.getElementById('fileNameLabel').textContent = file.name;
+    document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
+    document.getElementById('dataLoadedName').textContent = file.name;
+    document.getElementById('dataLoadedRow').classList.remove('hidden');
+
+    richTextStore = {};
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    // Re-derive rich text using original new headers only
+    for (let R = range.s.r + 1; R <= range.e.r; R++) {
+        const cardIdx = R - range.s.r - 1;
+        newHeaders.forEach((h, C) => {
+            const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+            if (!cell) return;
+            const richHTML = extractXlsxRichText(cell);
+            if (richHTML && richHTML !== escapeHtml(String(cell.v || ''))) setRichHTML(cardIdx, h, richHTML);
+        });
+    }
+
+    // Save current trigger column so we can restore it after rebuilding the dropdown
+    const prevTriggerVal = triggerColSelect.value;
+
+    triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
+    headers.forEach(h => {
+        const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
+        triggerColSelect.appendChild(opt);
+    });
+    triggerColSelect.classList.remove('hidden');
+
+    // Restore the trigger column selection if it still exists in the new sheet
+    if (prevTriggerVal && headers.includes(prevTriggerVal)) {
+        triggerColSelect.value = prevTriggerVal;
+    }
+
+    headers.forEach((h, i) => {
+        if (h.toLowerCase().match(/art|image|template/)) return;
+        if (h.toLowerCase() === 'amount') return;
+        if (!fieldConfigs[h]) fieldConfigs[h] = {
+            visible: true, top: 60 + i * 60, left: 25, width: 325, height: 45,
+            fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center'
+        };
+    });
+
+    ensureCardBack();
+    populateSelector();
+    currentIndex = Math.min(currentIndex, data.length - 1);
+    document.getElementById('cardSelector').value = currentIndex;
+    updateColumnUI();
+    updateProfileUI();
+    render();
+    saveSnapshot();
+    flashMsg('\u2713 Spreadsheet replaced \u2014 layout preserved', '#22c55e', 2500);
+}
+
 async function processDataFile(file) {
     if (!file) return;
     const reader = new FileReader();
@@ -2872,47 +2993,100 @@ async function processDataFile(file) {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellHTML: false, cellRichText: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-        data = json.filter(row => Object.values(row).join('').trim().length > 0);
-        headers = Object.keys(json[0]);
+        const newData = json.filter(row => Object.values(row).join('').trim().length > 0);
+        const newHeaders = Object.keys(json[0] || {});
 
-        document.getElementById('fileNameLabel').textContent = file.name;
-        document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
-        document.getElementById('dataLoadedName').textContent = file.name;
-        document.getElementById('dataLoadedRow').classList.remove('hidden');
-
-        richTextStore = {};
-        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-        for (let R = range.s.r + 1; R <= range.e.r; R++) {
-            const cardIdx = R - range.s.r - 1;
-            headers.forEach((h, C) => {
-                const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-                if (!cell) return;
-                const richHTML = extractXlsxRichText(cell);
-                if (richHTML && richHTML !== escapeHtml(String(cell.v || ''))) setRichHTML(cardIdx, h, richHTML);
-            });
+        // If no existing data, load directly
+        const existingDataHeaders = headers.filter(h => h !== '__sentinel');
+        if (!existingDataHeaders.length) {
+            _applyParsedData(file, newData, newHeaders, ws, null);
+            return;
         }
 
-        triggerColSelect.innerHTML = '<option value="">(No Profile Logic)</option>';
-        headers.forEach(h => {
-            const opt = document.createElement('option'); opt.value = h; opt.textContent = h;
-            triggerColSelect.appendChild(opt);
-        });
-        triggerColSelect.classList.remove('hidden');
+        // Detect column changes
+        const added   = newHeaders.filter(h => !existingDataHeaders.includes(h));
+        const missing  = existingDataHeaders.filter(h => !newHeaders.includes(h) && h !== 'Amount' && !h.toLowerCase().match(/^(art|image|artwork)$/));
 
-        headers.forEach((h, i) => {
-            if (h.toLowerCase().match(/art|image|template/)) return;
-            if (h.toLowerCase() === 'amount') return;  // Amount column is export-only
-            if (!fieldConfigs[h]) fieldConfigs[h] = {
-                visible: true, top: 60 + i * 60, left: 25, width: 325, height: 45,
-                fontSize: 16, fontWeight: 700, color: '#000000', fontStyle: 'normal', textAlign: 'center'
-            };
-        });
+        if (!added.length && !missing.length) {
+            // No structural changes — just replace data quietly
+            _applyParsedData(file, newData, newHeaders, ws, {});
+            return;
+        }
 
-        ensureCardBack();
-        populateSelector(); render();
+        // Show the replace-sheet modal
+        _pendingReplace = { file, newData, newHeaders, ws, added, missing };
+        openReplaceSheetModal(added, missing, newHeaders);
     };
     reader.readAsArrayBuffer(file);
 }
+
+function openReplaceSheetModal(added, missing, newHeaders) {
+    const modal = document.getElementById('replaceSheetModal');
+
+    // New columns
+    const newSec = document.getElementById('rsmNewColsSection');
+    const newList = document.getElementById('rsmNewColsList');
+    newList.innerHTML = '';
+    if (added.length) {
+        newSec.style.display = 'block';
+        added.forEach(h => {
+            const chip = document.createElement('span');
+            chip.style.cssText = 'font-size:9px;font-weight:900;background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:3px 9px;';
+            chip.textContent = h;
+            newList.appendChild(chip);
+        });
+    } else { newSec.style.display = 'none'; }
+
+    // Missing columns
+    const misSec = document.getElementById('rsmMissingColsSection');
+    const misList = document.getElementById('rsmMissingColsList');
+    misList.innerHTML = '';
+    if (missing.length) {
+        misSec.style.display = 'block';
+        missing.forEach(oldH => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:10px;background:#0c0c0e;border:1px solid #27272a;border-radius:10px;padding:8px 12px;';
+            row.innerHTML = `
+                <span style="flex:1;font-size:10px;font-weight:700;color:#d4d4d8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${oldH}">${oldH}</span>
+                <span style="font-size:9px;color:#52525b;flex-shrink:0;">→</span>
+                <select data-old="${oldH}" style="flex:1;background:#18181b;border:1px solid #3f3f46;border-radius:6px;color:#e4e4e7;font-size:9px;font-weight:700;font-family:'Inter',sans-serif;padding:4px 8px;outline:none;cursor:pointer;min-width:0;">
+                    <option value="__blank__">Leave blank</option>
+                    ${newHeaders.map(nh => `<option value="${nh}">${nh}</option>`).join('')}
+                </select>`;
+            misList.appendChild(row);
+        });
+    } else { misSec.style.display = 'none'; }
+
+    // No changes label
+    document.getElementById('rsmNoChanges').style.display = (!added.length && !missing.length) ? 'block' : 'none';
+
+    modal.style.display = 'flex';
+}
+
+document.getElementById('rsmCancelBtn').addEventListener('click', () => {
+    document.getElementById('replaceSheetModal').style.display = 'none';
+    document.getElementById('fileInput').value = '';
+    _pendingReplace = null;
+});
+
+document.getElementById('rsmConfirmBtn').addEventListener('click', () => {
+    if (!_pendingReplace) return;
+    const { file, newData, newHeaders, ws, missing } = _pendingReplace;
+
+    // Build replacement mappings from selects
+    const mappings = {};
+    document.querySelectorAll('#rsmMissingColsList select').forEach(sel => {
+        const oldH = sel.dataset.old;
+        const val = sel.value;
+        mappings[oldH] = (val === '__blank__') ? null : val;
+    });
+
+    document.getElementById('replaceSheetModal').style.display = 'none';
+    _pendingReplace = null;
+    document.getElementById('fileInput').value = '';
+
+    _applyParsedData(file, newData, newHeaders, ws, mappings);
+});
 
 function populateSelector() {
     const sel = document.getElementById('cardSelector');
@@ -3071,7 +3245,7 @@ function updateTemplateLibrary() {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPORT
 // ─────────────────────────────────────────────────────────────────────────────
-// ── Direct canvas renderer — no html2canvas dependency ────────────────────────
+// ── Image loader helper (still used for card-back fallback) ──────────────────
 function loadImage(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -3082,245 +3256,71 @@ function loadImage(src) {
     });
 }
 
-// Parse inline HTML (bold/italic/underline + img icons) into draw segments
+async function captureCard() {
+    closeInlineEditor(true);
+    const el = document.getElementById('cardPreview');
+    const savedTransform = el.style.transform;
+    el.style.transform = 'none';
+    const canvas = await html2canvas(el, {
+        scale:           4,
+        useCORS:         true,
+        allowTaint:      false,
+        backgroundColor: null,
+        width:           375,
+        height:          525,
+        windowScrollX:   0,
+        windowScrollY:   0,
+        logging:         false,
+    });
+    el.style.transform = savedTransform;
+    return canvas;
+}
+
+// For batch exports: switch card, render, wait two frames, then screenshot
+async function captureCardAt(idx) {
+    const savedEdit = isEditMode;
+    isEditMode = false;
+    currentIndex = idx;
+    render();
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const canvas = await captureCard();
+    isEditMode = savedEdit;
+    return canvas;
+}
+
+// parseRichHTMLSegments kept for any legacy references
 function parseRichHTMLSegments(htmlStr) {
     const tmp = document.createElement('div');
     tmp.innerHTML = htmlStr;
     const segs = [];
     function walk(node, bold, italic, underline) {
         if (node.nodeType === Node.TEXT_NODE) {
-            if (node.textContent) segs.push({ type: 'text', text: node.textContent, bold, italic, underline });
+            if (node.textContent) segs.push({ type:'text', text:node.textContent, bold, italic, underline });
             return;
         }
         if (node.nodeType !== Node.ELEMENT_NODE) return;
         const tag = node.tagName.toLowerCase();
-        if (tag === 'img') { segs.push({ type: 'img', src: node.src, width: node.style.width, height: node.style.height }); return; }
-        if (tag === 'br') { segs.push({ type: 'text', text: '\n', bold, italic, underline }); return; }
-        const newBold      = bold      || tag === 'b' || tag === 'strong';
-        const newItalic    = italic    || tag === 'i' || tag === 'em';
-        const newUnderline = underline || tag === 'u';
-        node.childNodes.forEach(c => walk(c, newBold, newItalic, newUnderline));
+        if (tag === 'img') { segs.push({ type:'img', src:node.src, width:node.style.width, height:node.style.height }); return; }
+        if (tag === 'br')  { segs.push({ type:'text', text:'\n', bold, italic, underline }); return; }
+        node.childNodes.forEach(c => walk(c,
+            bold      || tag==='b' || tag==='strong',
+            italic    || tag==='i' || tag==='em',
+            underline || tag==='u'));
     }
     tmp.childNodes.forEach(c => walk(c, false, false, false));
     return segs;
 }
 
-async function captureCard() {
-    closeInlineEditor(true);
-
-    const CARD_W = 375, CARD_H = 525, SCALE = 4;
-    const CW = CARD_W * SCALE, CH = CARD_H * SCALE;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = CW; canvas.height = CH;
-    const ctx = canvas.getContext('2d');
-
-    // Rounded rect clip (matches border-radius: 16px)
-    const R = 16 * SCALE;
-    ctx.beginPath();
-    ctx.moveTo(R, 0); ctx.lineTo(CW - R, 0);
-    ctx.arcTo(CW, 0, CW, R, R); ctx.lineTo(CW, CH - R);
-    ctx.arcTo(CW, CH, CW - R, CH, R); ctx.lineTo(R, CH);
-    ctx.arcTo(0, CH, 0, CH - R, R); ctx.lineTo(0, R);
-    ctx.arcTo(0, 0, R, 0, R); ctx.closePath();
-    ctx.clip();
-
-    // Card background (card back uses its own BG color)
-    if (isCardBack(currentIndex)) {
-        ctx.fillStyle = CARD_BACK_BG;
-    } else {
-        ctx.fillStyle = '#ffffff';
-    }
-    ctx.fillRect(0, 0, CW, CH);
-
-    // ── Card back: draw static flat image covering full card ────────────
-    if (isCardBack(currentIndex)) {
-        const cbTemplateSrc = cardBackTemplateName ? templateAssets[cardBackTemplateName] : null;
-        const cbSrc = cbTemplateSrc || resolveArtSrc(currentIndex) || CARD_BACK_DEFAULT_ART;
-        try {
-            const cbImg = await loadImage(cbSrc);
-            ctx.drawImage(cbImg, 0, 0, CW, CH);
-        } catch(e) { console.warn('Card back art load failed:', e.message); }
-        return canvas;
-    }
-
-    // ── Resolve card data ──────────────────────────────────────────────────
-    const savedIndex = currentIndex;
-    const row   = data[currentIndex];
-    const pVal  = triggerColSelect.value ? String(row?.[triggerColSelect.value] || '').trim() : '';
-
-    // ── Art layer ──────────────────────────────────────────────────────────
-    let artSrc = resolveArtSrc(currentIndex);
-    if (!artSrc) {
-        const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
-        const urlVal = artCol ? String(row[artCol] || '') : '';
-        if (urlVal.startsWith('http') || urlVal.startsWith('data:')) artSrc = urlVal;
-    }
-    if (artSrc) {
-        try {
-            const artImg = await loadImage(artSrc);
-            const artT   = getArtTransform(currentIndex);
-            const imgW   = Math.round(ART_BASE_W * artT.scale) * SCALE;
-            const imgH   = Math.round(ART_BASE_H * artT.scale) * SCALE;
-            const offX   = artT.offsetX * SCALE;
-            const offY   = artT.offsetY * SCALE;
-            ctx.drawImage(artImg, offX, offY, imgW, imgH);
-        } catch(e) { console.warn('Art load failed:', e.message); }
-    }
-
-    // ── Template layer ─────────────────────────────────────────────────────
-    let finalTemplateName = globalTemplateName;
-    if (pVal && profileSettings[pVal]?.frame) finalTemplateName = profileSettings[pVal].frame;
-    const templateSrc = templateAssets[finalTemplateName];
-    if (templateSrc) {
-        try {
-            const tImg = await loadImage(templateSrc);
-            ctx.drawImage(tImg, 0, 0, CW, CH);
-        } catch(e) { console.warn('Template load failed:', e.message); }
-    }
-
-    // ── Text / icon fields ─────────────────────────────────────────────────
-    for (const h of headers) {
-        if (h.toLowerCase().match(/art|image|template/)) continue;
-        if (h.toLowerCase() === 'amount') continue;  // Amount is export-only
-
-        // Visibility (use non-edit-mode logic)
-        const savedEditMode = isEditMode;
-        isEditMode = false;
-        const visible = getVisibilityByScope(h);
-        const conf    = getConfigByScope(h);
-        isEditMode = savedEditMode;
-        if (!visible) continue;
-
-        const richHTML  = injectIconsIntoRichHTML(getRichHTML(currentIndex, h));
-        const segments  = parseRichHTMLSegments(richHTML);
-        const alignment = conf.textAlign || 'center';
-        const fontSize  = (conf.fontSize || 14) * SCALE;
-        const fontWeight= conf.fontWeight || 400;
-        const color     = conf.color || '#000000';
-        const fontStyle = conf.fontStyle || 'normal';
-        const fontFamily= (conf.fontFamily || "'Atkinson Hyperlegible', sans-serif").replace(/'/g, '');
-        const textDecoration = conf.textDecoration || 'none';
-        const x = conf.left * SCALE, y = conf.top * SCALE;
-        const w = conf.width * SCALE, h_px = conf.height * SCALE;
-        // Match CSS: .dynamic-field { padding: 2px 4px; box-sizing: border-box }
-        const PAD_X = 4 * SCALE, PAD_Y = 2 * SCALE;
-        const innerX = x + PAD_X, innerW = w - PAD_X * 2;
-        const innerY = y + PAD_Y, innerH = h_px - PAD_Y * 2;
-
-        // Load any icon images in segments
-        for (const seg of segments) {
-            if (seg.type === 'img' && !seg._img) {
-                try { seg._img = await loadImage(seg.src); } catch(e) { seg._img = null; }
-            }
-        }
-
-        // Measure and wrap text into lines
-        function setFont(seg) {
-            const b = (seg.bold || String(fontWeight) >= '700') ? 'bold' : fontWeight;
-            const i = seg.italic ? 'italic' : fontStyle;
-            ctx.font = `${i} ${b} ${fontSize}px ${fontFamily}`;
-        }
-
-        // Build lines: split by \n first, then word-wrap within width
-        const lineHeight = fontSize * 1.2;
-        const lines = []; // each line: array of {seg, text or img}
-
-        let currentLine = [];
-        let currentLineW = 0;
-
-        function pushLine() { lines.push(currentLine); currentLine = []; currentLineW = 0; }
-
-        for (const seg of segments) {
-            if (seg.type === 'img') {
-                // Parse em-based size
-                const emSize = parseFloat(seg.width) || 1.1;
-                const imgPx  = emSize * fontSize;
-                if (currentLineW + imgPx > innerW && currentLine.length > 0) pushLine();
-                currentLine.push({ ...seg, drawW: imgPx, drawH: imgPx });
-                currentLineW += imgPx;
-                continue;
-            }
-            // text segment — split on \n
-            const parts = seg.text.split('\n');
-            parts.forEach((part, pi) => {
-                if (pi > 0) pushLine();
-                if (!part) return;
-                setFont(seg);
-                // Word-wrap
-                const words = part.split(/(?<=\s)/); // split keeping spaces
-                for (const word of words) {
-                    const ww = ctx.measureText(word).width;
-                    if (currentLineW + ww > innerW && currentLine.length > 0) pushLine();
-                    currentLine.push({ type: 'text', text: word, bold: seg.bold, italic: seg.italic, underline: seg.underline, drawW: ww });
-                    currentLineW += ww;
-                }
-            });
-        }
-        if (currentLine.length > 0) pushLine();
-
-        // Vertical centering within the inner (padded) field box
-        const totalTextH = lines.length * lineHeight;
-        let drawY = innerY + (innerH - totalTextH) / 2 + fontSize * 0.85; // baseline
-
-        ctx.save();
-        ctx.beginPath(); ctx.rect(x, y, w, h_px); ctx.clip(); // clip to outer field box
-
-        for (const line of lines) {
-            // Compute line width for alignment
-            let lineW = 0;
-            line.forEach(tok => { lineW += tok.drawW; });
-            let drawX;
-            if (alignment === 'right')  drawX = innerX + innerW - lineW;
-            else if (alignment === 'center') drawX = innerX + (innerW - lineW) / 2;
-            else drawX = innerX;
-
-            for (const tok of line) {
-                if (tok.type === 'img') {
-                    if (tok._img) {
-                        // Check if this line has any text tokens
-                        const hasText = line.some(t => t.type === 'text' && t.text.trim());
-                        let iconTop;
-                        if (hasText) {
-                            // Inline with text: center on x-height midpoint (≈ baseline - 0.25em)
-                            iconTop = drawY - fontSize * 0.25 - tok.drawH / 2;
-                        } else {
-                            // Icon-only line: center within the inner (padded) field box vertically
-                            iconTop = innerY + (innerH - tok.drawH) / 2;
-                        }
-                        ctx.drawImage(tok._img, drawX, iconTop, tok.drawW, tok.drawH);
-                    }
-                    drawX += tok.drawW;
-                    continue;
-                }
-                setFont(tok);
-                ctx.fillStyle = color;
-                ctx.fillText(tok.text, drawX, drawY);
-                if (tok.underline || textDecoration === 'underline') {
-                    const tw = ctx.measureText(tok.text).width;
-                    ctx.fillRect(drawX, drawY + 2, tw, Math.max(1, fontSize * 0.06));
-                }
-                drawX += tok.drawW;
-            }
-            drawY += lineHeight;
-        }
-        ctx.restore();
-    }
-
-    return canvas;
-}
 
 async function downloadCurrent() {
     if (!data.length) { flashMsg('⚠ No data loaded', '#f97316', 3000); return; }
     flashMsg('⏳ Capturing card…', '#f97316', 30000);
     try {
-        const orig = isEditMode; isEditMode = false;
         const canvas = await captureCard();
         const link = document.createElement('a');
         link.download = `${getCardName(currentIndex).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48) || 'card_' + currentIndex}.png`;
         link.href = canvas.toDataURL('image/png');
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        isEditMode = orig; render();
         flashMsg('✓ PNG exported', '#4ade80', 2500);
     } catch(err) {
         console.error('Export error:', err);
@@ -3343,9 +3343,8 @@ async function exportAllCards() {
         const copyCounts = {};
         for (let e = 0; e < total; e++) {
             const i = exportIndices[e];
-            currentIndex = i;
             progress.textContent = `Rendering ${e + 1} / ${total}`;
-            const canvas = await captureCard();
+            const canvas = await captureCardAt(i);
             const blob   = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'));
             const baseName = getCardName(i).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48) || `card_${i}`;
             copyCounts[i] = (copyCounts[i] || 0) + 1;
@@ -3391,8 +3390,7 @@ async function exportToWord() {
     const exportIndices = buildExportIndices(cardBackIncludedInExport);
     const pngB64s = [];
     for (let e = 0; e < exportIndices.length; e++) {
-        currentIndex = exportIndices[e];
-        const canvas = await captureCard();
+        const canvas = await captureCardAt(exportIndices[e]);
         // strip the "data:image/png;base64," prefix
         pngB64s.push(canvas.toDataURL('image/png').split(',')[1]);
         document.getElementById('exportProgress').textContent = `Rendering ${e + 1} / ${exportIndices.length}`;
@@ -3923,16 +3921,14 @@ async function exportForTTS() {
         const cardBackIdx = data.findIndex(r => r.__sentinel === CARD_BACK_SENTINEL);
         let cbCanvas = null;
         if (cardBackIdx >= 0) {
-            currentIndex = cardBackIdx;
-            cbCanvas = await captureCard();
+            cbCanvas = await captureCardAt(cardBackIdx);
         }
 
         // Render ALL card canvases up front
         const cardCanvases = [];
         for (let e = 0; e < totalCards; e++) {
-            currentIndex = exportIndices[e];
             progress.textContent = `Rendering card ${e + 1} / ${totalCards}…`;
-            const canvas = await captureCard();
+            const canvas = await captureCardAt(exportIndices[e]);
             cardCanvases.push(canvas);
         }
 
