@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Card Architect v46</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -47,9 +47,9 @@
         .art-layer.art-edit-active:active { cursor: grabbing; }
 
         .dynamic-field {
-            position: absolute; z-index: 20; display: flex; align-items: center;
+            position: absolute; z-index: 20; display: flex; align-items: flex-start;
             line-height: 1.2; word-break: break-word; pointer-events: none;
-            box-sizing: border-box; padding: 2px 4px; white-space: pre-wrap;
+            box-sizing: border-box; padding: 0; white-space: pre-wrap;
         }
         .dynamic-field.align-left   { justify-content: flex-start; text-align: left; }
         .dynamic-field.align-center { justify-content: center;     text-align: center; }
@@ -68,7 +68,7 @@
         .inline-editor {
             position: absolute; z-index: 200; box-sizing: border-box;
             outline: 2px solid #f97316; border-radius: 3px;
-            background: rgba(255,255,255,0.96); padding: 2px 4px;
+            background: rgba(255,255,255,0.96); padding: 0;
             line-height: 1.2; word-break: break-word; white-space: pre-wrap;
             overflow: hidden; cursor: text; font-family: 'Inter', sans-serif;
         }
@@ -2977,10 +2977,8 @@ function _applyParsedData(file, newData, newHeaders, ws, replaceMappings) {
 
     ensureCardBack();
     populateSelector();
-    currentIndex = Math.min(currentIndex, data.length - 1);
+    currentIndex = Math.min(Math.max(0, currentIndex), Math.max(0, data.length - 2)); // -2 to skip card back
     document.getElementById('cardSelector').value = currentIndex;
-    updateColumnUI();
-    updateProfileUI();
     render();
     saveSnapshot();
     flashMsg('\u2713 Spreadsheet replaced \u2014 layout preserved', '#22c55e', 2500);
@@ -3256,27 +3254,206 @@ function loadImage(src) {
     });
 }
 
+// ── Direct canvas renderer — pixel-perfect, no html2canvas dependency ──────────
+function parseRichHTMLSegments(htmlStr) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = htmlStr;
+    const segs = [];
+    function walk(node, bold, italic, underline) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent) segs.push({ type: 'text', text: node.textContent, bold, italic, underline });
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'img') { segs.push({ type: 'img', src: node.src, width: node.style.width, height: node.style.height }); return; }
+        if (tag === 'br') { segs.push({ type: 'text', text: '\n', bold, italic, underline }); return; }
+        const newBold      = bold      || tag === 'b' || tag === 'strong';
+        const newItalic    = italic    || tag === 'i' || tag === 'em';
+        const newUnderline = underline || tag === 'u';
+        node.childNodes.forEach(c => walk(c, newBold, newItalic, newUnderline));
+    }
+    tmp.childNodes.forEach(c => walk(c, false, false, false));
+    return segs;
+}
+
 async function captureCard() {
     closeInlineEditor(true);
-    const el = document.getElementById('cardPreview');
-    const savedTransform = el.style.transform;
-    el.style.transform = 'none';
-    const canvas = await html2canvas(el, {
-        scale:           4,
-        useCORS:         true,
-        allowTaint:      false,
-        backgroundColor: null,
-        width:           375,
-        height:          525,
-        windowScrollX:   0,
-        windowScrollY:   0,
-        logging:         false,
-    });
-    el.style.transform = savedTransform;
+
+    const CARD_W = 375, CARD_H = 525, SCALE = 4;
+    const CW = CARD_W * SCALE, CH = CARD_H * SCALE;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = CW; canvas.height = CH;
+    const ctx = canvas.getContext('2d');
+
+    // Rounded rect clip (matches border-radius: 16px)
+    const R = 16 * SCALE;
+    ctx.beginPath();
+    ctx.moveTo(R, 0); ctx.lineTo(CW - R, 0);
+    ctx.arcTo(CW, 0, CW, R, R); ctx.lineTo(CW, CH - R);
+    ctx.arcTo(CW, CH, CW - R, CH, R); ctx.lineTo(R, CH);
+    ctx.arcTo(0, CH, 0, CH - R, R); ctx.lineTo(0, R);
+    ctx.arcTo(0, 0, R, 0, R); ctx.closePath();
+    ctx.clip();
+
+    // Card background
+    ctx.fillStyle = isCardBack(currentIndex) ? CARD_BACK_BG : '#ffffff';
+    ctx.fillRect(0, 0, CW, CH);
+
+    // ── Card back ──────────────────────────────────────────────────────────────
+    if (isCardBack(currentIndex)) {
+        const cbTemplateSrc = cardBackTemplateName ? templateAssets[cardBackTemplateName] : null;
+        const cbSrc = cbTemplateSrc || resolveArtSrc(currentIndex) || CARD_BACK_DEFAULT_ART;
+        try { const cbImg = await loadImage(cbSrc); ctx.drawImage(cbImg, 0, 0, CW, CH); } catch(e) {}
+        return canvas;
+    }
+
+    // ── Card data ──────────────────────────────────────────────────────────────
+    const row  = data[currentIndex];
+    const pVal = triggerColSelect.value ? String(row?.[triggerColSelect.value] || '').trim() : '';
+
+    // ── Art layer ──────────────────────────────────────────────────────────────
+    let artSrc = resolveArtSrc(currentIndex);
+    if (!artSrc) {
+        const artCol = headers.find(h => h.toLowerCase().match(/art|image/));
+        const urlVal = artCol ? String(row[artCol] || '') : '';
+        if (urlVal.startsWith('http') || urlVal.startsWith('data:')) artSrc = urlVal;
+    }
+    if (artSrc) {
+        try {
+            const artImg = await loadImage(artSrc);
+            const artT = getArtTransform(currentIndex);
+            const imgW = Math.round(ART_BASE_W * artT.scale) * SCALE;
+            const imgH = Math.round(ART_BASE_H * artT.scale) * SCALE;
+            ctx.drawImage(artImg, artT.offsetX * SCALE, artT.offsetY * SCALE, imgW, imgH);
+        } catch(e) { console.warn('Art load failed:', e.message); }
+    }
+
+    // ── Template layer ─────────────────────────────────────────────────────────
+    let finalTemplateName = globalTemplateName;
+    if (pVal && profileSettings[pVal]?.frame) finalTemplateName = profileSettings[pVal].frame;
+    const templateSrc = templateAssets[finalTemplateName];
+    if (templateSrc) {
+        try { const tImg = await loadImage(templateSrc); ctx.drawImage(tImg, 0, 0, CW, CH); }
+        catch(e) { console.warn('Template load failed:', e.message); }
+    }
+
+    // ── Text / icon fields ─────────────────────────────────────────────────────
+    for (const h of headers) {
+        if (h.toLowerCase().match(/art|image|template/)) continue;
+        if (h.toLowerCase() === 'amount') continue;
+
+        const savedEditMode = isEditMode; isEditMode = false;
+        const visible = getVisibilityByScope(h);
+        const conf    = getConfigByScope(h);
+        isEditMode = savedEditMode;
+        if (!visible) continue;
+
+        const richHTML   = injectIconsIntoRichHTML(getRichHTML(currentIndex, h));
+        const segments   = parseRichHTMLSegments(richHTML);
+        const alignment  = conf.textAlign || 'center';
+        const fontSize   = (conf.fontSize || 14) * SCALE;
+        const fontWeight = conf.fontWeight || 400;
+        const color      = conf.color || '#000000';
+        const fontStyle  = conf.fontStyle || 'normal';
+        const fontFamily = (conf.fontFamily || "'Atkinson Hyperlegible', sans-serif").replace(/'/g, '');
+        const textDec    = conf.textDecoration || 'none';
+        const rot        = (conf.rotation || 0) * Math.PI / 180;
+
+        // Field box in canvas pixels — no padding, matching CSS padding:0
+        const fx = conf.left * SCALE, fy = conf.top * SCALE;
+        const fw = conf.width * SCALE, fh = conf.height * SCALE;
+
+        // Load icon images
+        for (const seg of segments) {
+            if (seg.type === 'img' && !seg._img) {
+                try { seg._img = await loadImage(seg.src); } catch(e) { seg._img = null; }
+            }
+        }
+
+        function setFont(seg) {
+            const b = (seg.bold || String(fontWeight) >= '700') ? 'bold' : fontWeight;
+            const i = seg.italic ? 'italic' : fontStyle;
+            ctx.font = `${i} ${b} ${fontSize}px ${fontFamily}`;
+        }
+
+        const lineHeight = fontSize * 1.2;
+        const lines = [];
+        let currentLine = [], currentLineW = 0;
+        function pushLine() { lines.push(currentLine); currentLine = []; currentLineW = 0; }
+
+        for (const seg of segments) {
+            if (seg.type === 'img') {
+                const emSize = parseFloat(seg.width) || 1.1;
+                const imgPx  = emSize * fontSize;
+                if (currentLineW + imgPx > fw && currentLine.length > 0) pushLine();
+                currentLine.push({ ...seg, drawW: imgPx, drawH: imgPx });
+                currentLineW += imgPx;
+                continue;
+            }
+            const parts = seg.text.split('\n');
+            parts.forEach((part, pi) => {
+                if (pi > 0) pushLine();
+                if (!part) return;
+                setFont(seg);
+                const words = part.split(/(?<=\s)/);
+                for (const word of words) {
+                    const ww = ctx.measureText(word).width;
+                    if (currentLineW + ww > fw && currentLine.length > 0) pushLine();
+                    currentLine.push({ type: 'text', text: word, bold: seg.bold, italic: seg.italic, underline: seg.underline, drawW: ww });
+                    currentLineW += ww;
+                }
+            });
+        }
+        if (currentLine.length > 0) pushLine();
+
+        // align-items: flex-start — text starts at top of field box (no vertical centering)
+        let drawY = fy + fontSize * 0.85; // first baseline
+
+        ctx.save();
+        if (rot !== 0) {
+            ctx.translate(fx + fw / 2, fy + fh / 2);
+            ctx.rotate(rot);
+            ctx.translate(-(fx + fw / 2), -(fy + fh / 2));
+        }
+        ctx.beginPath(); ctx.rect(fx, fy, fw, fh); ctx.clip();
+
+        for (const line of lines) {
+            let lineW = 0;
+            line.forEach(tok => { lineW += tok.drawW; });
+            let drawX;
+            if (alignment === 'right')       drawX = fx + fw - lineW;
+            else if (alignment === 'center') drawX = fx + (fw - lineW) / 2;
+            else                             drawX = fx;
+
+            for (const tok of line) {
+                if (tok.type === 'img') {
+                    if (tok._img) {
+                        const iconTop = drawY - tok.drawH * 0.8;
+                        ctx.drawImage(tok._img, drawX, iconTop, tok.drawW, tok.drawH);
+                    }
+                    drawX += tok.drawW;
+                    continue;
+                }
+                setFont(tok);
+                ctx.fillStyle = color;
+                ctx.fillText(tok.text, drawX, drawY);
+                if (tok.underline || textDec === 'underline') {
+                    const tw = ctx.measureText(tok.text).width;
+                    ctx.fillRect(drawX, drawY + 2, tw, Math.max(1, fontSize * 0.06));
+                }
+                drawX += tok.drawW;
+            }
+            drawY += lineHeight;
+        }
+        ctx.restore();
+    }
+
     return canvas;
 }
 
-// For batch exports: switch card, render, wait two frames, then screenshot
+// For batch exports: switch to card index, render, capture
 async function captureCardAt(idx) {
     const savedEdit = isEditMode;
     isEditMode = false;
@@ -3286,29 +3463,6 @@ async function captureCardAt(idx) {
     const canvas = await captureCard();
     isEditMode = savedEdit;
     return canvas;
-}
-
-// parseRichHTMLSegments kept for any legacy references
-function parseRichHTMLSegments(htmlStr) {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = htmlStr;
-    const segs = [];
-    function walk(node, bold, italic, underline) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            if (node.textContent) segs.push({ type:'text', text:node.textContent, bold, italic, underline });
-            return;
-        }
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
-        const tag = node.tagName.toLowerCase();
-        if (tag === 'img') { segs.push({ type:'img', src:node.src, width:node.style.width, height:node.style.height }); return; }
-        if (tag === 'br')  { segs.push({ type:'text', text:'\n', bold, italic, underline }); return; }
-        node.childNodes.forEach(c => walk(c,
-            bold      || tag==='b' || tag==='strong',
-            italic    || tag==='i' || tag==='em',
-            underline || tag==='u'));
-    }
-    tmp.childNodes.forEach(c => walk(c, false, false, false));
-    return segs;
 }
 
 
