@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect v46</title>
+    <title>Card Architect v47</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -241,7 +241,7 @@
         #reorderModal.visible { display: flex; }
         #reorderModalBox {
             background: #18181b; border: 1px solid #3f3f46; border-radius: 16px;
-            padding: 24px; width: 380px; max-height: 80vh;
+            padding: 24px; width: 440px; max-height: 80vh;
             display: flex; flex-direction: column;
             box-shadow: 0 32px 64px rgba(0,0,0,0.7);
         }
@@ -283,6 +283,24 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .reorder-row.is-card-back .reorder-name { color: #a5b4fc; }
+
+        /* ── Exclude-from-export toggle in reorder list ── */
+        .reorder-exclude-btn {
+            flex-shrink: 0; width: 20px; height: 20px; border-radius: 5px;
+            border: 1.5px solid #52525b; background: transparent;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.15s; padding: 0;
+        }
+        .reorder-exclude-btn:hover { border-color: #f97316; }
+        .reorder-exclude-btn.included { border-color: #f97316; background: #f97316; }
+        .reorder-exclude-btn.included svg { display: block; }
+        .reorder-exclude-btn svg { display: none; }
+        .reorder-row.excluded-row { opacity: 0.45; }
+        .reorder-row.excluded-row .reorder-name { text-decoration: line-through; color: #52525b; }
+        .reorder-excl-label {
+            font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em;
+            color: #ef4444; flex-shrink: 0;
+        }
 
         .badge-rich { font-size: 7px; font-weight: 900; background: rgba(168,85,247,0.15); color: #a855f7; padding: 1px 5px; border-radius: 4px; }
         .badge-edited { font-size: 7px; font-weight: 900; background: rgba(249,115,22,0.12); color: #f97316; padding: 1px 5px; border-radius: 4px; }
@@ -1290,14 +1308,14 @@
     <div id="reorderModalBox">
         <div class="flex items-center justify-between">
             <div>
-                <div class="text-sm font-black text-white uppercase tracking-widest">Reorder Cards</div>
-                <div class="text-[9px] text-zinc-500 font-bold mt-0.5">Drag the ⠿ handle to move a card</div>
+                <div class="text-sm font-black text-white uppercase tracking-widest">Manage &amp; Reorder Cards</div>
+                <div class="text-[9px] text-zinc-500 font-bold mt-0.5">Drag ⠿ to reorder · Toggle ✓ to include/exclude from all exports</div>
             </div>
             <button id="reorderCloseBtn" class="text-zinc-500 hover:text-white text-xl font-black leading-none transition-colors">×</button>
         </div>
         <div id="reorderList"></div>
         <div class="flex gap-3">
-            <button id="reorderConfirmBtn" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Apply Order</button>
+            <button id="reorderConfirmBtn" class="flex-1 bg-orange-600 hover:bg-orange-500 text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Apply</button>
             <button id="reorderCancelBtn" class="flex-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Cancel</button>
         </div>
     </div>
@@ -4714,12 +4732,18 @@ function isSlotBlank(ctx, x, y, w, h) {
 // ─────────────────────────────────────────────────────────────────────────────
 (function() {
     let reorderWorkingOrder = []; // array of data[] indices in the proposed new order
+    let reorderExcluded = new Set(); // data indices to exclude from all exports
     let dragSrcIdx = null;        // index within reorderWorkingOrder being dragged
 
     function openReorderModal() {
         if (!data.length) return;
         // Build the working order as the current card sequence
         reorderWorkingOrder = data.map((_, i) => i);
+        // Pre-populate excluded set from cards that currently have amount=0
+        reorderExcluded = new Set();
+        for (let i = 0; i < data.length; i++) {
+            if (!isCardBack(i) && getCardAmount(i) === 0) reorderExcluded.add(i);
+        }
         buildReorderList();
         document.getElementById('reorderModal').classList.add('visible');
     }
@@ -4734,8 +4758,9 @@ function isSlotBlank(ctx, x, y, w, h) {
 
         reorderWorkingOrder.forEach((dataIdx, pos) => {
             const isBack = isCardBack(dataIdx);
+            const isExcluded = !isBack && reorderExcluded.has(dataIdx);
             const row = document.createElement('div');
-            row.className = 'reorder-row' + (isBack ? ' is-card-back' : '');
+            row.className = 'reorder-row' + (isBack ? ' is-card-back' : '') + (isExcluded ? ' excluded-row' : '');
             row.dataset.pos = pos;
 
             const name = isBack
@@ -4749,14 +4774,30 @@ function isSlotBlank(ctx, x, y, w, h) {
                 <circle cx="3" cy="13" r="1.5"/><circle cx="9" cy="13" r="1.5"/>
             </svg>`;
 
+            const checkSvg = `<svg width="9" height="9" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
             row.innerHTML = `
                 <div class="reorder-handle" title="${isBack ? 'Card Back always stays last' : 'Drag to reorder'}">${handleSvg}</div>
                 <span class="reorder-num">${pos + 1}</span>
                 <span class="reorder-name">${name}</span>
+                ${isExcluded ? '<span class="reorder-excl-label">excluded</span>' : ''}
+                ${!isBack ? `<button class="reorder-exclude-btn ${!isExcluded ? 'included' : ''}" title="${isExcluded ? 'Click to include in exports' : 'Click to exclude from all exports'}">${checkSvg}</button>` : ''}
             `;
 
             if (!isBack) {
                 const handle = row.querySelector('.reorder-handle');
+                const exBtn = row.querySelector('.reorder-exclude-btn');
+
+                // Toggle include/exclude
+                exBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (reorderExcluded.has(dataIdx)) {
+                        reorderExcluded.delete(dataIdx);
+                    } else {
+                        reorderExcluded.add(dataIdx);
+                    }
+                    buildReorderList();
+                });
 
                 // ── Pointer-based drag ──
                 handle.addEventListener('pointerdown', (e) => {
@@ -4768,9 +4809,7 @@ function isSlotBlank(ctx, x, y, w, h) {
 
                 handle.addEventListener('pointermove', (e) => {
                     if (dragSrcIdx === null || dragSrcIdx !== pos) return;
-                    // Find which row we're hovering over
                     const listRect = list.getBoundingClientRect();
-                    const relY = e.clientY - listRect.top + list.scrollTop;
                     const rows = [...list.querySelectorAll('.reorder-row')];
                     let targetPos = null;
                     for (const r of rows) {
@@ -4780,8 +4819,6 @@ function isSlotBlank(ctx, x, y, w, h) {
                         if (e.clientY < rMid) { targetPos = rPos; break; }
                     }
                     if (targetPos === null) targetPos = rows.length - 1;
-
-                    // Highlight drop target
                     rows.forEach(r => r.classList.remove('drag-over'));
                     if (targetPos !== pos) {
                         const targetRow = rows.find(r => parseInt(r.dataset.pos) === targetPos);
@@ -4796,7 +4833,6 @@ function isSlotBlank(ctx, x, y, w, h) {
                     row.classList.remove('dragging');
                     list.querySelectorAll('.reorder-row').forEach(r => r.classList.remove('drag-over'));
 
-                    // Determine drop position
                     const rows = [...list.querySelectorAll('.reorder-row')];
                     let targetPos = rows.length - 1;
                     for (const r of rows) {
@@ -4806,20 +4842,18 @@ function isSlotBlank(ctx, x, y, w, h) {
                         if (e.clientY < rMid) { targetPos = rPos; break; }
                     }
 
-                    // Don't drop onto or past the card-back sentinel
                     const cbPosInOrder = reorderWorkingOrder.findIndex(i => isCardBack(i));
                     if (cbPosInOrder >= 0 && targetPos >= cbPosInOrder) {
                         targetPos = cbPosInOrder - 1;
                     }
 
                     if (targetPos !== dragSrcIdx && targetPos >= 0) {
-                        // Splice within reorderWorkingOrder
                         const [moved] = reorderWorkingOrder.splice(dragSrcIdx, 1);
                         reorderWorkingOrder.splice(targetPos, 0, moved);
                     }
 
                     dragSrcIdx = null;
-                    buildReorderList(); // Rebuild with updated numbering
+                    buildReorderList();
                 });
             }
 
@@ -4828,17 +4862,25 @@ function isSlotBlank(ctx, x, y, w, h) {
     }
 
     function applyReorder() {
+        // Apply exclude states first — set amount=0 for excluded, restore to 1 if was 0 due to exclusion
+        for (let i = 0; i < data.length; i++) {
+            if (isCardBack(i)) continue;
+            if (reorderExcluded.has(i)) {
+                setCardAmount(i, 0);
+            } else {
+                // Only restore if it was 0 (don't override user-set amounts > 1)
+                if (getCardAmount(i) === 0) setCardAmount(i, 1);
+            }
+        }
+
         // reorderWorkingOrder is the new desired sequence of old indices.
-        // We need to remap all index-keyed stores to match.
-        const oldToNew = {}; // oldIdx -> newIdx
+        const oldToNew = {};
         reorderWorkingOrder.forEach((oldIdx, newIdx) => { oldToNew[oldIdx] = newIdx; });
 
-        // Reorder data[]
         const newData = reorderWorkingOrder.map(i => data[i]);
         data.length = 0;
         newData.forEach(r => data.push(r));
 
-        // Remap artAssignments
         const newArtAssignments = {};
         for (const [k, v] of Object.entries(artAssignments)) {
             const ni = oldToNew[parseInt(k)];
@@ -4846,7 +4888,6 @@ function isSlotBlank(ctx, x, y, w, h) {
         }
         artAssignments = newArtAssignments;
 
-        // Remap artTransforms
         const newArtTransforms = {};
         for (const [k, v] of Object.entries(artTransforms)) {
             const ni = oldToNew[parseInt(k)];
@@ -4854,7 +4895,6 @@ function isSlotBlank(ctx, x, y, w, h) {
         }
         artTransforms = newArtTransforms;
 
-        // Remap richTextStore
         const newRichTextStore = {};
         for (const [k, v] of Object.entries(richTextStore)) {
             const ni = oldToNew[parseInt(k)];
@@ -4862,7 +4902,6 @@ function isSlotBlank(ctx, x, y, w, h) {
         }
         richTextStore = newRichTextStore;
 
-        // Remap cardOverrides
         const newCardOverrides = {};
         for (const [k, v] of Object.entries(cardOverrides)) {
             const ni = oldToNew[parseInt(k)];
@@ -4870,7 +4909,6 @@ function isSlotBlank(ctx, x, y, w, h) {
         }
         cardOverrides = newCardOverrides;
 
-        // Keep currentIndex tracking the same card
         const oldCurrent = currentIndex;
         currentIndex = oldToNew[oldCurrent] ?? 0;
 
@@ -4881,6 +4919,13 @@ function isSlotBlank(ctx, x, y, w, h) {
         if (isArtEditMode) syncArtSlider();
         saveSnapshot();
         closeReorderModal();
+
+        const excCount = reorderExcluded.size;
+        if (excCount > 0) {
+            flashMsg(`✓ Applied · ${excCount} card${excCount !== 1 ? 's' : ''} excluded from exports`, '#f97316', 3000);
+        } else {
+            flashMsg('✓ Order applied', '#4ade80', 2000);
+        }
     }
 
     // Wire up buttons
