@@ -1368,6 +1368,14 @@ function isCardBack(idx) {
     return data[idx] && data[idx].__sentinel === CARD_BACK_SENTINEL;
 }
 
+// Exact-name check for reserved columns (art linking, template name, amount).
+// Must be exact match, not substring — otherwise a column like "Artist"
+// gets wrongly treated as the "art" link column.
+const RESERVED_COLUMNS = new Set(['art', 'image', 'artwork', 'template']);
+function isReservedColumn(h) {
+    return RESERVED_COLUMNS.has(h.toLowerCase());
+}
+
 function ensureCardBack() {
     // Remove any existing sentinel first (in case it got duplicated)
     data = data.filter(r => r.__sentinel !== CARD_BACK_SENTINEL);
@@ -2198,7 +2206,7 @@ function render(forExport = false) {
 
     // Fields
     headers.forEach(h => {
-        if (h.toLowerCase().match(/art|image|template/)) return;
+        if (isReservedColumn(h)) return;
         if (h.toLowerCase() === 'amount') return;  // Amount is export-only, never rendered on card
         if (!getVisibilityByScope(h)) return;
 
@@ -2269,7 +2277,7 @@ function updateProfileUI() {
             <div class="mt-4 border-t border-zinc-800 pt-3 space-y-2">
                 <span class="text-[8px] font-black text-zinc-500 uppercase block mb-2">Layer Overrides</span>
                 ${headers.map(h => {
-                    if (h.toLowerCase().match(/art|image|template/)) return '';
+                    if (isReservedColumn(h)) return '';
                     if (h.toLowerCase() === 'amount') return '';
                     const isVisible = settings.fields[h] !== undefined ? settings.fields[h] : (fieldConfigs[h] ? fieldConfigs[h].visible : true);
                     return `<div class="flex items-center justify-between"><span class="text-[9px] text-zinc-400 font-bold uppercase tracking-wider">${h}</span><input type="checkbox" data-header="${h}" ${isVisible ? 'checked' : ''} class="profile-field-toggle accent-orange-500 w-3 h-3"></div>`;
@@ -2290,7 +2298,7 @@ function updateProfileUI() {
 function updateColumnUI() {
     columnList.innerHTML = '';
     headers.forEach(h => {
-        if (h.toLowerCase().match(/art|image|template/)) return;
+        if (isReservedColumn(h)) return;
         if (h.toLowerCase() === 'amount') return;  // Amount is export-only
         const isVisible = getVisibilityByScope(h);
         const hasRich = richTextStore[currentIndex]?.[h] !== undefined;
@@ -2985,7 +2993,7 @@ function _applyParsedData(file, newData, newHeaders, ws, replaceMappings) {
     }
 
     headers.forEach((h, i) => {
-        if (h.toLowerCase().match(/art|image|template/)) return;
+        if (isReservedColumn(h)) return;
         if (h.toLowerCase() === 'amount') return;
         if (!fieldConfigs[h]) fieldConfigs[h] = {
             visible: true, top: 60 + i * 60, left: 25, width: 325, height: 45,
@@ -2997,6 +3005,7 @@ function _applyParsedData(file, newData, newHeaders, ws, replaceMappings) {
     populateSelector();
     currentIndex = Math.min(Math.max(0, currentIndex), Math.max(0, data.length - 2)); // -2 to skip card back
     document.getElementById('cardSelector').value = currentIndex;
+    updateColumnUI();
     render();
     saveSnapshot();
     flashMsg('\u2713 Spreadsheet replaced \u2014 layout preserved', '#22c55e', 2500);
@@ -3359,7 +3368,7 @@ async function captureCard() {
 
     // ── Text / icon fields ─────────────────────────────────────────────────────
     for (const h of headers) {
-        if (h.toLowerCase().match(/art|image|template/)) continue;
+        if (isReservedColumn(h)) continue;
         if (h.toLowerCase() === 'amount') continue;
 
         const savedEditMode = isEditMode; isEditMode = false;
