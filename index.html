@@ -54,6 +54,9 @@
         .dynamic-field.align-left   { justify-content: flex-start; text-align: left; }
         .dynamic-field.align-center { justify-content: center;     text-align: center; }
         .dynamic-field.align-right  { justify-content: flex-end;   text-align: right; }
+        .dynamic-field.valign-top    { align-items: flex-start; }
+        .dynamic-field.valign-middle { align-items: center; }
+        .dynamic-field.valign-bottom { align-items: flex-end; }
 
         .field-rich-content { display: inline; line-height: inherit; word-break: break-word; white-space: pre-wrap; }
         .field-rich-content b, .field-rich-content strong { font-weight: 900; }
@@ -1034,6 +1037,11 @@
                 <button id="btnAlignLeft"   class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
                 <button id="btnAlignCenter" class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="2.5" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
                 <button id="btnAlignRight"  class="align-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="1.2" rx="0.6" fill="currentColor"/><rect x="4" y="5.4" width="7" height="1.2" rx="0.6" fill="currentColor"/><rect x="1" y="8.8" width="10" height="1.2" rx="0.6" fill="currentColor"/></svg></button>
+            </div>
+            <div class="flex gap-0.5 shrink-0 border-l border-zinc-800 pl-2">
+                <button id="btnVAlignTop"    class="align-btn" title="Align top"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1"/><rect x="3" y="2.6" width="6" height="1.3" rx="0.6" fill="currentColor"/></svg></button>
+                <button id="btnVAlignMiddle" class="align-btn" title="Align middle"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1"/><rect x="3" y="5.35" width="6" height="1.3" rx="0.6" fill="currentColor"/></svg></button>
+                <button id="btnVAlignBottom" class="align-btn" title="Align bottom"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" stroke-width="1"/><rect x="3" y="8.1" width="6" height="1.3" rx="0.6" fill="currentColor"/></svg></button>
             </div>
             <div class="flex flex-col shrink-0 border-l border-zinc-800 pl-2">
                 <span class="text-[6px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-0.5">Rotate °</span>
@@ -2212,10 +2220,11 @@ function render(forExport = false) {
 
         const conf = getConfigByScope(h);
         const alignment = conf.textAlign || 'center';
+        const vAlignment = conf.vAlign || 'top';
         let richHTML = injectIconsIntoRichHTML(getRichHTML(currentIndex, h));
 
         const div = document.createElement('div');
-        div.className = `dynamic-field align-${alignment}`;
+        div.className = `dynamic-field align-${alignment} valign-${vAlignment}`;
         div.dataset.field = h;
         if (false) div.classList.add('export-nudge'); // removed: caused text shift in html2canvas
         const rot = conf.rotation || 0;
@@ -2348,6 +2357,7 @@ function updateToolbarUI() {
         document.getElementById('fontSizeDisplay').value = conf.fontSize;
         document.getElementById('fontColorPicker').value = conf.color;
         updateAlignButtons(conf.textAlign || 'center');
+        updateVAlignButtons(conf.vAlign || 'top');
         const ffs = document.getElementById('fontFamilySelect');
         ffs.value = conf.fontFamily || "'Atkinson Hyperlegible', sans-serif";
         (function(){ const opt = ffs.options[ffs.selectedIndex]; const hint = document.getElementById('fontHint'); if(hint && opt){ const role=opt.getAttribute('data-role')||''; const genre=opt.getAttribute('data-genre')||''; if(role&&genre){ const rc={'Body':'#22c55e','Title':'#818cf8','Flavor':'#f59e0b'}; hint.style.color=rc[role]||'#f97316'; hint.textContent=genre+' · Best for: '+role+' text'; } else hint.textContent=''; } })();
@@ -2378,6 +2388,16 @@ function updateAlignButtons(a) {
 document.getElementById('btnAlignLeft').onclick   = () => saveAlignChange('left');
 document.getElementById('btnAlignCenter').onclick = () => saveAlignChange('center');
 document.getElementById('btnAlignRight').onclick  = () => saveAlignChange('right');
+
+function saveVAlignChange(v) { saveStyleChange('vAlign', v); updateVAlignButtons(v); saveSnapshot(); }
+function updateVAlignButtons(v) {
+    document.getElementById('btnVAlignTop').classList.toggle('active',    v === 'top');
+    document.getElementById('btnVAlignMiddle').classList.toggle('active', v === 'middle');
+    document.getElementById('btnVAlignBottom').classList.toggle('active', v === 'bottom');
+}
+document.getElementById('btnVAlignTop').onclick    = () => saveVAlignChange('top');
+document.getElementById('btnVAlignMiddle').onclick = () => saveVAlignChange('middle');
+document.getElementById('btnVAlignBottom').onclick = () => saveVAlignChange('bottom');
 
 // Rotation controls
 document.getElementById('rotationDisplay').onchange = (e) => {
@@ -3435,8 +3455,16 @@ async function captureCard() {
         }
         if (currentLine.length > 0) pushLine();
 
-        // align-items: flex-start — text starts at top of field box (no vertical centering)
-        let drawY = fy + fontSize * 0.85; // first baseline
+        // Vertical alignment — mirrors CSS align-items (flex-start/center/flex-end)
+        // applied to the wrapped text block as a whole, so it stays in parity
+        // with the live preview for top/middle/bottom.
+        const vAlignment = conf.vAlign || 'top';
+        const totalTextH = lines.length * lineHeight;
+        let blockTop;
+        if (vAlignment === 'middle') blockTop = fy + (fh - totalTextH) / 2;
+        else if (vAlignment === 'bottom') blockTop = fy + fh - totalTextH;
+        else blockTop = fy; // top (previous default behavior, unchanged)
+        let drawY = blockTop + fontSize * 0.85; // first baseline
 
         ctx.save();
         if (rot !== 0) {
