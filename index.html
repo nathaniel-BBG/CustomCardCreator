@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Architect v47</title>
+    <title>Card Architect v50</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1335,6 +1335,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 let data = [];
 let headers = [];
+// Column headers that exist in the currently-loaded spreadsheet. Any header
+// in `headers` but NOT in this set was added manually inside the app (via
+// "+ Add" in the Edit Card modal) and is therefore safe to delete.
+let spreadsheetHeaders = new Set();
 let fieldConfigs = {};
 let profileSettings = {};
 let profileStyleOverrides = {};
@@ -1374,6 +1378,18 @@ let cardBackIncludedInExport = true;
 
 function isCardBack(idx) {
     return data[idx] && data[idx].__sentinel === CARD_BACK_SENTINEL;
+}
+
+// Profile-level card orientation ('vertical' default, or 'horizontal').
+// Card Back is always vertical — profile orientation never applies to it.
+function getCardOrientation(idx) {
+    if (isCardBack(idx)) return 'vertical';
+    const t = triggerColSelect.value;
+    const pVal = t ? String(data[idx]?.[t] || '').trim() : '';
+    return (pVal && profileSettings[pVal]?.orientation) || 'vertical';
+}
+function getCardDims(idx) {
+    return getCardOrientation(idx) === 'horizontal' ? { w: 525, h: 375 } : { w: 375, h: 525 };
 }
 
 // Exact-name check for reserved columns (art linking, template name, amount).
@@ -1807,6 +1823,24 @@ function sanitiseRichHTML(html) {
 
 function extractXlsxRichText(cell) {
     if (!cell || cell.t === undefined) return null;
+
+    // Preferred path: SheetJS's own HTML rendering of the rich-text runs (cell.h).
+    // Unlike cell.r (raw run XML), this is populated for BOTH shared-string cells
+    // (the normal way Excel stores rich text) AND inline-string cells (the way
+    // some tools — e.g. Google Sheets' .xlsx export — store every cell). Without
+    // this, formatting from inline-string files was silently dropped on import.
+    if (cell.h !== undefined) {
+        const plain = escapeHtml(String(cell.v ?? ''));
+        if (!cell.h || cell.h === plain) return null; // no rich formatting present
+        // sanitiseRichHTML strips SheetJS's wrapper <span style="..."> and turns
+        // any text-decoration:underline style into a real <u> tag, matching the
+        // tag-based format the rest of the app (rich text store, renderer) expects.
+        const cleaned = sanitiseRichHTML(cell.h);
+        return cleaned && cleaned !== plain ? cleaned : null;
+    }
+
+    // Fallback: manually parse the raw rich-text run XML (older behavior, kept
+    // in case a future SheetJS build stops populating cell.h for some reason).
     if (!cell.r) return null;
     try {
         const doc = new DOMParser().parseFromString(
@@ -2138,6 +2172,33 @@ function setDefaultEditScope() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PROMOTE LAYOUT TO PROFILE — when Target is switched to Profile, snapshot
+// every field's current effective position/style/visibility into that
+// profile in one shot, so the whole layout becomes independent of Global
+// instead of only the next-touched field.
+// ─────────────────────────────────────────────────────────────────────────────
+function promoteLayoutToProfile(pVal) {
+    if (!pVal) return;
+    if (!profileStyleOverrides[pVal]) profileStyleOverrides[pVal] = {};
+    if (!profileSettings[pVal]) profileSettings[pVal] = { frame: '', fields: {}, orientation: 'vertical' };
+    if (!profileSettings[pVal].fields) profileSettings[pVal].fields = {};
+    headers.forEach(h => {
+        if (isReservedColumn(h)) return;
+        if (h.toLowerCase() === 'amount') return;
+        if (!fieldConfigs[h]) return;
+        // Style/position: leave any existing profile override alone, otherwise
+        // snapshot the current Global value as the profile's starting point.
+        if (!profileStyleOverrides[pVal][h]) {
+            profileStyleOverrides[pVal][h] = JSON.parse(JSON.stringify(fieldConfigs[h]));
+        }
+        // Visibility: same rule — don't clobber an existing profile-level choice.
+        if (profileSettings[pVal].fields[h] === undefined) {
+            profileSettings[pVal].fields[h] = fieldConfigs[h].visible;
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RENDER
 // ─────────────────────────────────────────────────────────────────────────────
 function render(forExport = false) {
@@ -2151,6 +2212,11 @@ function render(forExport = false) {
         if (banner) banner.classList.add('visible');
         // BG color
         document.getElementById('cardPreview').style.background = CARD_BACK_BG;
+        // Card Back is always vertical/portrait — profile orientation doesn't apply here
+        document.getElementById('cardPreview').style.width  = '375px';
+        document.getElementById('cardPreview').style.height = '525px';
+        artLayer.style.width  = '375px';
+        artLayer.style.height = '525px';
         // No template overlay
         document.getElementById('templateLayer').style.backgroundImage = 'none';
         // Art: template override > user-assigned art > default flat image
@@ -2166,6 +2232,7 @@ function render(forExport = false) {
             document.getElementById('activeProfileDisplay').textContent = '▣ Card Back';
             updateColumnUI(); renderArtLibrary(); syncAmountDisplay();
         }
+        if (!forExport && window._scaleCardPreview) window._scaleCardPreview();
         return;
     }
 
@@ -2176,6 +2243,14 @@ function render(forExport = false) {
     const row = data[currentIndex];
     const pVal = getProfileVal() || '';
     document.getElementById('activeProfileDisplay').textContent = pVal ? `Profile: ${pVal}` : 'Global Context';
+
+    // Card dimensions — Vertical (375×525) by default, or Horizontal (525×375)
+    // when this card's profile is set to Horizontal orientation.
+    const dims = getCardDims(currentIndex);
+    document.getElementById('cardPreview').style.width  = dims.w + 'px';
+    document.getElementById('cardPreview').style.height = dims.h + 'px';
+    artLayer.style.width  = dims.w + 'px';
+    artLayer.style.height = dims.h + 'px';
 
     // Keep scope dropdown options greyed/enabled to reflect this card's effective level
     if (isEditMode && !forExport) updateScopeSelectOptions();
@@ -2189,8 +2264,8 @@ function render(forExport = false) {
     // Art layer
     const artSrc = resolveArtSrc(currentIndex);
     const artT = getArtTransform(currentIndex);
-    const imgW = Math.round(ART_BASE_W * artT.scale);
-    const imgH = Math.round(ART_BASE_H * artT.scale);
+    const imgW = Math.round(dims.w * artT.scale);
+    const imgH = Math.round(dims.h * artT.scale);
 
     let finalArtSrc = artSrc;
     if (!finalArtSrc) {
@@ -2247,6 +2322,7 @@ function render(forExport = false) {
     });
 
     if (!forExport) { updateColumnUI(); updateProfileUI(); updateScopeText(); renderArtLibrary(); syncAmountDisplay(); }
+    if (!forExport && window._scaleCardPreview) window._scaleCardPreview();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2260,7 +2336,7 @@ function updateProfileUI() {
     profileContainer.innerHTML = '';
 
     uniqueValues.forEach(val => {
-        if (!profileSettings[val]) profileSettings[val] = { frame: '', fields: {} };
+        if (!profileSettings[val]) profileSettings[val] = { frame: '', fields: {}, orientation: 'vertical' };
         const settings = profileSettings[val];
         const isActive = val === currentCardPVal;
         const card = document.createElement('div');
@@ -2283,6 +2359,13 @@ function updateProfileUI() {
                 <label class="text-[8px] font-black text-zinc-500 uppercase block mb-1">Frame Reference</label>
                 <select class="profile-frame-select w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] text-orange-400 outline-none">${frameOptions}</select>
             </div>
+            <div class="mb-3">
+                <label class="text-[8px] font-black text-zinc-500 uppercase block mb-1">Card Orientation</label>
+                <select class="profile-orientation-select w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-[10px] text-orange-400 outline-none">
+                    <option value="vertical" ${(settings.orientation || 'vertical') === 'vertical' ? 'selected' : ''}>Vertical (Portrait)</option>
+                    <option value="horizontal" ${settings.orientation === 'horizontal' ? 'selected' : ''}>Horizontal (Landscape)</option>
+                </select>
+            </div>
             <div class="mt-4 border-t border-zinc-800 pt-3 space-y-2">
                 <span class="text-[8px] font-black text-zinc-500 uppercase block mb-2">Layer Overrides</span>
                 ${headers.map(h => {
@@ -2294,6 +2377,7 @@ function updateProfileUI() {
             </div>`;
 
         card.querySelector('.profile-frame-select').onchange = (e) => { profileSettings[val].frame = e.target.value; render(); saveSnapshot(); };
+        card.querySelector('.profile-orientation-select').onchange = (e) => { profileSettings[val].orientation = e.target.value; render(); saveSnapshot(); };
         card.querySelectorAll('.profile-field-toggle').forEach(chk => {
             chk.onchange = (e) => { profileSettings[val].fields[e.target.getAttribute('data-header')] = e.target.checked; render(); saveSnapshot(); };
         });
@@ -2304,6 +2388,35 @@ function updateProfileUI() {
 // ─────────────────────────────────────────────────────────────────────────────
 // COLUMN UI
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Delete a column that was added inside the app (not present in the loaded
+// spreadsheet). Removes it from headers, every card row, and any
+// field-level configs/overrides that reference it by name.
+function deleteColumn(h) {
+    if (spreadsheetHeaders.has(h)) return; // safety guard — UI never exposes this for spreadsheet columns
+    if (!confirm(`Delete column "${h}"?\n\nThis removes it — and its layout settings — from every card. This can't be undone.`)) return;
+
+    headers = headers.filter(x => x !== h);
+    data.forEach(row => { delete row[h]; });
+    delete fieldConfigs[h];
+    Object.values(cardOverrides).forEach(co => { if (co) delete co[h]; });
+    Object.values(profileStyleOverrides).forEach(pso => { if (pso) delete pso[h]; });
+    Object.values(profileSettings).forEach(ps => { if (ps?.fields) delete ps.fields[h]; });
+    Object.values(richTextStore).forEach(rt => { if (rt) delete rt[h]; });
+    if (selectedHeader === h) selectedHeader = null;
+
+    // Remove from the Profile Logic trigger dropdown if it was an option there
+    const opt = Array.from(triggerColSelect.options).find(o => o.value === h);
+    if (opt) opt.remove();
+
+    document.getElementById('dataScopeLabel').textContent = `${headers.length} COLUMNS`;
+    updateColumnUI();
+    updateProfileUI();
+    render();
+    saveSnapshot();
+    flashMsg(`✓ Column "${h}" deleted`, '#22c55e', 2500);
+}
+
 function updateColumnUI() {
     columnList.innerHTML = '';
     headers.forEach(h => {
@@ -2312,6 +2425,7 @@ function updateColumnUI() {
         const isVisible = getVisibilityByScope(h);
         const hasRich = richTextStore[currentIndex]?.[h] !== undefined;
         const hasFmt  = /<[biu]>/.test(richTextStore[currentIndex]?.[h] || '');
+        const isUserAdded = !spreadsheetHeaders.has(h);
 
         const item = document.createElement('div');
         item.className = `flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${selectedHeader === h ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-900/50 border border-transparent'}`;
@@ -2321,8 +2435,12 @@ function updateColumnUI() {
                 ${h}
                 ${hasRich ? '<span class="badge-edited">EDITED</span>' : ''}
                 ${hasFmt  ? '<span class="badge-rich">RICH</span>'   : ''}
+                ${isUserAdded ? '<span class="badge-edited" style="background:rgba(99,102,241,0.12);color:#a5b4fc;border-color:rgba(99,102,241,0.3);">ADDED</span>' : ''}
             </span>
-            <input type="checkbox" ${isVisible ? 'checked' : ''} class="accent-orange-500 col-vis-toggle">`;
+            <span class="flex items-center gap-2">
+                <input type="checkbox" ${isVisible ? 'checked' : ''} class="accent-orange-500 col-vis-toggle">
+                ${isUserAdded ? `<button type="button" class="col-delete-btn" title="Delete this column" style="color:#71717a;background:none;border:none;cursor:pointer;font-size:14px;font-weight:900;line-height:1;padding:2px 5px;border-radius:5px;transition:all .15s;">×</button>` : ''}
+            </span>`;
 
         item.querySelector('.col-vis-toggle').onclick = (e) => {
             e.stopPropagation();
@@ -2341,6 +2459,12 @@ function updateColumnUI() {
             }
             render(); saveSnapshot();
         };
+        const delBtn = item.querySelector('.col-delete-btn');
+        if (delBtn) {
+            delBtn.onmouseover = () => { delBtn.style.color = '#ef4444'; delBtn.style.background = 'rgba(239,68,68,0.12)'; };
+            delBtn.onmouseout  = () => { delBtn.style.color = '#71717a'; delBtn.style.background = 'none'; };
+            delBtn.onclick = (e) => { e.stopPropagation(); deleteColumn(h); };
+        }
         columnList.appendChild(item);
     });
 }
@@ -2722,6 +2846,13 @@ document.getElementById('editCardBtn').addEventListener('click', () => {
             const wrap = document.createElement('div');
             wrap.style.marginBottom = '14px';
 
+            // Only columns NOT present in the loaded spreadsheet can be deleted —
+            // these were added manually via "+ Add" below.
+            const isUserAdded = !spreadsheetHeaders.has(h);
+            const deleteBtnHtml = isUserAdded
+                ? `<button type="button" class="ecm-delete-field-btn" title="Delete this column" style="color:#71717a;background:none;border:none;cursor:pointer;font-size:12px;font-weight:900;line-height:1;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;">×</button>`
+                : '';
+
             if (isProfileCol) {
                 const existingVals = [...new Set(
                     data.filter((r, i) => !isCardBack(i))
@@ -2734,7 +2865,7 @@ document.getElementById('editCardBtn').addEventListener('click', () => {
                 });
 
                 wrap.innerHTML = `
-                    <span class="acm-label">${h} <span style="color:#f97316;font-size:8px;">▸ Profile</span></span>
+                    <span class="acm-label">${h} <span style="color:#f97316;font-size:8px;">▸ Profile</span>${deleteBtnHtml}</span>
                     <select class="acm-select ecm-field" data-header="${h}">${options}</select>
                     <input class="acm-input ecm-field-custom" data-header="${h}" type="text" placeholder="Or type a new value…" autocomplete="off" style="margin-top:6px;display:${existingVals.includes(currentVal) ? 'none' : 'block'};" value="${existingVals.includes(currentVal) ? '' : currentVal}">
                 `;
@@ -2747,9 +2878,20 @@ document.getElementById('editCardBtn').addEventListener('click', () => {
                     else custom.focus();
                 });
             } else {
-                wrap.innerHTML = `<span class="acm-label">${h}</span><input class="acm-input ecm-field" data-header="${h}" type="text" value="${currentVal.replace(/"/g, '&quot;')}" autocomplete="off">`;
+                wrap.innerHTML = `<span class="acm-label">${h}${deleteBtnHtml}</span><input class="acm-input ecm-field" data-header="${h}" type="text" value="${currentVal.replace(/"/g, '&quot;')}" autocomplete="off">`;
             }
             fieldsContainer.appendChild(wrap);
+
+            const delBtn = wrap.querySelector('.ecm-delete-field-btn');
+            if (delBtn) {
+                delBtn.onmouseover = () => { delBtn.style.color = '#ef4444'; delBtn.style.background = 'rgba(239,68,68,0.12)'; };
+                delBtn.onmouseout  = () => { delBtn.style.color = '#71717a'; delBtn.style.background = 'none'; };
+                delBtn.onclick = (e) => {
+                    e.preventDefault();
+                    deleteColumn(h);
+                    wrap.remove();
+                };
+            }
         });
     }
 
@@ -2874,7 +3016,16 @@ document.getElementById('amountDecBtn').onclick      = () => { if (data.length) 
 document.getElementById('amountIncBtn').onclick      = () => { if (data.length) setCardAmount(currentIndex, getCardAmount(currentIndex) + 1); };
 // Export buttons wired below via split-button logic
 document.getElementById('triggerCol').onchange        = () => render();
-document.getElementById('savingScopeSelect').onchange = () => { updateScopeText(); updateToolbarUI(); render(); };
+document.getElementById('savingScopeSelect').onchange = () => {
+    if (scopeSelect.value === 'profile') {
+        const pVal = getProfileVal();
+        if (pVal) {
+            promoteLayoutToProfile(pVal);
+            saveSnapshot();
+        }
+    }
+    updateScopeText(); updateScopeSelectOptions(); updateToolbarUI(); render();
+};
 
 
 document.getElementById('clearScopeBtn').onclick = () => {
@@ -2927,6 +3078,7 @@ document.getElementById('modeToggle').onchange = (e) => { isStyleMode = e.target
 document.getElementById('clearDataBtn').addEventListener('click', () => {
     if (!confirm('Clear the loaded spreadsheet? All field edits will be lost.')) return;
     data = []; headers = []; richTextStore = {}; fieldConfigs = {};
+    spreadsheetHeaders = new Set();
     profileSettings = {}; profileStyleOverrides = {}; cardOverrides = {};
     document.getElementById('cardBackBanner').classList.remove('visible');
     document.getElementById('fileNameLabel').textContent = 'Upload CSV/Excel';
@@ -2956,6 +3108,10 @@ function _applyParsedData(file, newData, newHeaders, ws, replaceMappings) {
 
     data = newData;
     headers = newHeaders;
+    // Exactly the new sheet's own columns — set BEFORE any old-column
+    // merge-back below, so reinserted/leftover columns are correctly
+    // treated as "not in the spreadsheet" (i.e. deletable).
+    spreadsheetHeaders = new Set(newHeaders);
 
     // Apply missing-column decisions: for each old column not in new sheet,
     // if user chose a replacement column, copy that data; if null, leave blank (already '' from defval)
@@ -3035,7 +3191,7 @@ async function processDataFile(file) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellHTML: false, cellRichText: true });
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellHTML: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
         const newData = json.filter(row => Object.values(row).join('').trim().length > 0);
@@ -3327,7 +3483,14 @@ function parseRichHTMLSegments(htmlStr) {
 async function captureCard() {
     closeInlineEditor(true);
 
-    const CARD_W = 375, CARD_H = 525, SCALE = 4;
+    // Card surface is the natural design size for this card's orientation —
+    // Horizontal profiles get a 525×375 surface; everything else (including
+    // Card Back) stays 375×525. The final rotation to a standard 375×525
+    // output file happens at the very end of this function.
+    const orientation = getCardOrientation(currentIndex);
+    const CARD_W = orientation === 'horizontal' ? 525 : 375;
+    const CARD_H = orientation === 'horizontal' ? 375 : 525;
+    const SCALE = 4;
     const CW = CARD_W * SCALE, CH = CARD_H * SCALE;
 
     const canvas = document.createElement('canvas');
@@ -3371,8 +3534,8 @@ async function captureCard() {
         try {
             const artImg = await loadImage(artSrc);
             const artT = getArtTransform(currentIndex);
-            const imgW = Math.round(ART_BASE_W * artT.scale) * SCALE;
-            const imgH = Math.round(ART_BASE_H * artT.scale) * SCALE;
+            const imgW = Math.round(CARD_W * artT.scale) * SCALE;
+            const imgH = Math.round(CARD_H * artT.scale) * SCALE;
             ctx.drawImage(artImg, artT.offsetX * SCALE, artT.offsetY * SCALE, imgW, imgH);
         } catch(e) { console.warn('Art load failed:', e.message); }
     }
@@ -3503,6 +3666,21 @@ async function captureCard() {
             drawY += lineHeight;
         }
         ctx.restore();
+    }
+
+    // Horizontal-profile cards are rendered on their natural 525×375 surface
+    // above. Rotate that finished render 90° into a standard 375×525 output
+    // canvas — since the source dimensions are exactly swapped, this is a
+    // lossless rotation (no cropping, no stretching). Text reads sideways in
+    // the final file, by design — the design itself was built sideways.
+    if (orientation === 'horizontal') {
+        const rotated = document.createElement('canvas');
+        rotated.width = CH; rotated.height = CW;
+        const rctx = rotated.getContext('2d');
+        rctx.translate(CH, 0);
+        rctx.rotate(Math.PI / 2);
+        rctx.drawImage(canvas, 0, 0);
+        return rotated;
     }
 
     return canvas;
@@ -3893,6 +4071,7 @@ async function saveProject() {
             version: PROJECT_VERSION, savedAt: new Date().toISOString(),
             projectName: document.getElementById('projectNameInput').value.trim(),
             data, headers, currentIndex, fieldConfigs,
+            spreadsheetHeaders: Array.from(spreadsheetHeaders),
             profileSettings, profileStyleOverrides, cardOverrides, richTextStore,
             globalTemplateName,
             cardBackTemplateName, cardBackIncludedInExport,
@@ -3968,6 +4147,10 @@ async function loadProject(file) {
         profileStyleOverrides = meta.profileStyleOverrides || {};
         cardOverrides         = meta.cardOverrides         || {};
         richTextStore         = meta.richTextStore         || {};
+        // Older saves won't have this field — default to "all current
+        // headers are from the spreadsheet" so nothing becomes unexpectedly
+        // deletable on a project saved before this feature existed.
+        spreadsheetHeaders    = new Set(meta.spreadsheetHeaders || headers);
         globalTemplateName    = meta.globalTemplateName    || null;
         templateAssets        = loadedTemplates;
         iconLibrary           = loadedIcons;
@@ -4984,35 +5167,39 @@ saveSnapshot();
 // MOBILE RESPONSIVE: card scaling + sidebar drawer toggle
 // ─────────────────────────────────────────────────────────────────────────────
 (function() {
-    const CARD_W = 375;
-    const CARD_H = 525;
-
     function isMobile() { return window.innerWidth <= 768; }
 
     function scaleCard() {
+        const card = document.getElementById('cardPreview');
+        if (!card) return;
         if (!isMobile()) {
             // Reset on desktop
-            const card = document.getElementById('cardPreview');
-            if (card) { card.style.transform = ''; card.style.marginBottom = ''; }
+            card.style.transform = ''; card.style.marginBottom = '';
             const wrapper = document.getElementById('cardPreviewWrapper');
             if (wrapper) { wrapper.style.minHeight = ''; wrapper.style.paddingBottom = ''; }
             return;
         }
+        // Measure the card's natural (unscaled) size — offsetWidth/Height ignore
+        // CSS transforms, so this is correct whether the active card is
+        // Vertical (375×525) or Horizontal (525×375).
+        const naturalW = card.offsetWidth;
+        const naturalH = card.offsetHeight;
         const padding = 24; // px each side
         const available = window.innerWidth - padding;
-        const scale = Math.min(1, available / CARD_W);
-        const card = document.getElementById('cardPreview');
-        if (!card) return;
+        const scale = Math.min(1, available / naturalW);
         card.style.transform = `scale(${scale})`;
         card.style.transformOrigin = 'top center';
         // Compensate for the visual space lost when scaling down
-        const scaledH = CARD_H * scale;
-        const offset = CARD_H - scaledH;
+        const scaledH = naturalH * scale;
+        const offset = naturalH - scaledH;
         card.style.marginBottom = `-${offset}px`;
         // Banner width
         const banner = document.getElementById('cardBackBanner');
         if (banner) { banner.style.width = `${available}px`; }
     }
+    // Exposed so render() can re-run this immediately after a card/profile
+    // switch changes the preview's dimensions (e.g. Vertical ↔ Horizontal).
+    window._scaleCardPreview = scaleCard;
 
     // Add a collapsible sidebar toggle button on mobile
     function buildSidebarToggle() {
@@ -5084,13 +5271,6 @@ saveSnapshot();
     } else {
         buildSidebarToggle();
         scaleCard();
-    }
-
-    // Re-scale after render() since it might change layout
-    const _origRender = window.render;
-    if (typeof _origRender === 'function') {
-        // render is defined in the outer scope, patch via timeout
-        setTimeout(() => { scaleCard(); }, 100);
     }
 
     // ── DEBUG: inject test data so dbl-click can be tested without a CSV ──
